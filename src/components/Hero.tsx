@@ -1,8 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-healthcare.jpg";
 
 const Hero = () => {
+  const navigate = useNavigate();
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       <div className="absolute inset-0 gradient-hero opacity-10"></div>
@@ -25,6 +27,7 @@ const Hero = () => {
             <div className="flex flex-col sm:flex-row gap-4">
               <Button 
                 size="lg" 
+                onClick={() => navigate('/doctors')}
                 className="gradient-hero text-white shadow-soft hover:shadow-hover transition-smooth group"
               >
                 Find a Doctor
@@ -33,6 +36,7 @@ const Hero = () => {
               <Button 
                 size="lg" 
                 variant="outline"
+                onClick={() => navigate('/doctors')}
                 className="border-2 hover:bg-muted transition-smooth"
               >
                 Book Appointment
