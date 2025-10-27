@@ -5,11 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, FileText, Pill, User, Clock, MapPin, Video } from "lucide-react";
-import { Appointment } from "@/types";
+import { Appointment, Prescription } from "@/types";
 import { useNavigate } from "react-router-dom";
+import PrescriptionMedicineSearch from "@/components/PrescriptionMedicineSearch";
 
 const PatientDashboard = () => {
   const navigate = useNavigate();
+
+  // Mock patient data - in production, this would come from auth context or API
+  const patientName = "Sarah";
   
   const [appointments] = useState<Appointment[]>([
     {
@@ -46,6 +50,71 @@ const PatientDashboard = () => {
     },
   ]);
 
+  const [prescriptions] = useState<Prescription[]>([
+    {
+      id: "1",
+      doctorId: "3",
+      doctorName: "Dr. Maya Khalil",
+      date: "2025-10-15",
+      diagnosis: "Bacterial Infection",
+      medications: [
+        {
+          name: "Amoxicillin",
+          dosage: "500mg",
+          frequency: "3 times daily",
+          duration: "7 days",
+          instructions: "Take with food",
+        },
+        {
+          name: "Paracetamol",
+          dosage: "500mg",
+          frequency: "As needed",
+          duration: "5 days",
+          instructions: "For fever or pain",
+        },
+      ],
+      notes: "Complete the full course of antibiotics even if feeling better",
+    },
+    {
+      id: "2",
+      doctorId: "1",
+      doctorName: "Dr. Sarah Johnson",
+      date: "2025-10-10",
+      diagnosis: "Hypertension",
+      medications: [
+        {
+          name: "Lisinopril",
+          dosage: "10mg",
+          frequency: "Once daily",
+          duration: "Ongoing",
+          instructions: "Take in the morning",
+        },
+      ],
+      notes: "Monitor blood pressure regularly",
+    },
+    {
+      id: "3",
+      doctorId: "2",
+      doctorName: "Dr. Ahmad Hassan",
+      date: "2025-10-05",
+      diagnosis: "Vitamin Deficiency",
+      medications: [
+        {
+          name: "Vitamin D3",
+          dosage: "1000 IU",
+          frequency: "Once daily",
+          duration: "3 months",
+        },
+        {
+          name: "Multivitamin",
+          dosage: "1 tablet",
+          frequency: "Once daily",
+          duration: "Ongoing",
+        },
+      ],
+    },
+  ]);
+
   const upcomingAppointments = appointments.filter(a => a.status === 'upcoming');
   const pastAppointments = appointments.filter(a => a.status === 'completed');
 
@@ -56,8 +125,12 @@ const PatientDashboard = () => {
       <main className="flex-1 pt-24 pb-16 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-2">Patient Dashboard</h1>
-            <p className="text-muted-foreground">Welcome back, manage your healthcare</p>
+            <h1 className="text-4xl font-bold mb-2">
+              Welcome back, <span className="text-primary">{patientName}</span>!
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              Your health journey starts here. Stay on top of your appointments and wellness goals.
+            </p>
           </div>
 
           <div className="grid md:grid-cols-4 gap-6 mb-8">
@@ -96,7 +169,7 @@ const PatientDashboard = () => {
                     <Pill className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">3</p>
+                    <p className="text-2xl font-bold">{prescriptions.length}</p>
                     <p className="text-sm text-muted-foreground">Prescriptions</p>
                   </div>
                 </div>
@@ -211,16 +284,24 @@ const PatientDashboard = () => {
                   <CardTitle>Quick Actions</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Button 
+                  <Button
                     onClick={() => navigate('/doctors')}
                     className="w-full gradient-hero text-white"
                   >
                     Book New Appointment
                   </Button>
-                  <Button variant="outline" className="w-full">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => navigate('/medical-records')}
+                  >
                     View Medical Records
                   </Button>
-                  <Button variant="outline" className="w-full">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => navigate('/pharmacies')}
+                  >
                     Find Pharmacy
                   </Button>
                 </CardContent>
@@ -228,17 +309,21 @@ const PatientDashboard = () => {
 
               <Card className="shadow-soft">
                 <CardHeader>
-                  <CardTitle>Recent Prescriptions</CardTitle>
+                  <CardTitle>My Prescriptions</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="p-3 bg-muted rounded-lg">
-                    <p className="font-medium text-sm">Amoxicillin 500mg</p>
-                    <p className="text-xs text-muted-foreground">Dr. Maya Khalil - Oct 15</p>
-                  </div>
-                  <div className="p-3 bg-muted rounded-lg">
-                    <p className="font-medium text-sm">Lisinopril 10mg</p>
-                    <p className="text-xs text-muted-foreground">Dr. Sarah Johnson - Oct 10</p>
-                  </div>
+                  {prescriptions.slice(0, 2).map((prescription) => (
+                    <div key={prescription.id} className="p-3 bg-muted rounded-lg">
+                      <p className="font-medium text-sm mb-1">
+                        {prescription.medications.map(m => m.name).join(', ')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {prescription.doctorName} - {new Date(prescription.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </p>
+                    </div>
+                  ))}
+
+                  <PrescriptionMedicineSearch prescriptions={prescriptions} />
                 </CardContent>
               </Card>
             </div>

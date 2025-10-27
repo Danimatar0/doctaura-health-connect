@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -9,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 
 interface DoctorFiltersProps {
@@ -51,6 +53,38 @@ const DoctorFilters = ({
   maxPrice,
   setMaxPrice,
 }: DoctorFiltersProps) => {
+  // Local state for temporary filter values
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+  const [localSpecialty, setLocalSpecialty] = useState(specialty);
+  const [localLocation, setLocalLocation] = useState(location);
+  const [localMaxPrice, setLocalMaxPrice] = useState(maxPrice);
+
+  const handleApplyFilters = () => {
+    setSearchQuery(localSearchQuery);
+    setSpecialty(localSpecialty);
+    setLocation(localLocation);
+    setMaxPrice(localMaxPrice);
+  };
+
+  const handleResetFilters = () => {
+    const defaultValues = {
+      searchQuery: "",
+      specialty: "All Specialties",
+      location: "All Locations",
+      maxPrice: 100,
+    };
+
+    setLocalSearchQuery(defaultValues.searchQuery);
+    setLocalSpecialty(defaultValues.specialty);
+    setLocalLocation(defaultValues.location);
+    setLocalMaxPrice(defaultValues.maxPrice);
+
+    setSearchQuery(defaultValues.searchQuery);
+    setSpecialty(defaultValues.specialty);
+    setLocation(defaultValues.location);
+    setMaxPrice(defaultValues.maxPrice);
+  };
+
   return (
     <Card className="shadow-soft">
       <CardContent className="pt-6 space-y-6">
@@ -61,8 +95,8 @@ const DoctorFilters = ({
             <Input
               id="search"
               placeholder="Search by name or specialty..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={localSearchQuery}
+              onChange={(e) => setLocalSearchQuery(e.target.value)}
               className="pl-9"
             />
           </div>
@@ -70,7 +104,7 @@ const DoctorFilters = ({
 
         <div>
           <Label htmlFor="specialty" className="mb-2 block">Specialty</Label>
-          <Select value={specialty} onValueChange={setSpecialty}>
+          <Select value={localSpecialty} onValueChange={setLocalSpecialty}>
             <SelectTrigger id="specialty">
               <SelectValue placeholder="Select specialty" />
             </SelectTrigger>
@@ -86,7 +120,7 @@ const DoctorFilters = ({
 
         <div>
           <Label htmlFor="location" className="mb-2 block">Location</Label>
-          <Select value={location} onValueChange={setLocation}>
+          <Select value={localLocation} onValueChange={setLocalLocation}>
             <SelectTrigger id="location">
               <SelectValue placeholder="Select location" />
             </SelectTrigger>
@@ -102,16 +136,32 @@ const DoctorFilters = ({
 
         <div>
           <Label className="mb-2 block">
-            Max Price: ${maxPrice}
+            Max Price: ${localMaxPrice}
           </Label>
           <Slider
-            value={[maxPrice]}
-            onValueChange={(values) => setMaxPrice(values[0])}
+            value={[localMaxPrice]}
+            onValueChange={(values) => setLocalMaxPrice(values[0])}
             min={0}
             max={100}
             step={5}
             className="mt-2"
           />
+        </div>
+
+        <div className="flex gap-2 pt-2">
+          <Button
+            onClick={handleApplyFilters}
+            className="flex-1"
+          >
+            Apply Filters
+          </Button>
+          <Button
+            onClick={handleResetFilters}
+            variant="outline"
+            className="flex-1"
+          >
+            Reset Filters
+          </Button>
         </div>
       </CardContent>
     </Card>

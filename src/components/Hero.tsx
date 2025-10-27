@@ -14,7 +14,7 @@ const Hero = () => {
           <div className="space-y-8 animate-fade-in">
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight">
               Your Health,{" "}
-              <span className="text-transparent bg-clip-text gradient-hero">
+              <span className="text-primary">
                 Connected
               </span>
             </h1>
@@ -25,21 +25,13 @@ const Hero = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 onClick={() => navigate('/doctors')}
                 className="gradient-hero text-white shadow-soft hover:shadow-hover transition-smooth group"
               >
                 Find a Doctor
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-smooth" />
-              </Button>
-              <Button 
-                size="lg" 
-                variant="outline"
-                onClick={() => navigate('/doctors')}
-                className="border-2 hover:bg-muted transition-smooth"
-              >
-                Book Appointment
               </Button>
             </div>
 

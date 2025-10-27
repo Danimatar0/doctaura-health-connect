@@ -8,6 +8,9 @@ import { Calendar, Users, Clock, DollarSign, Video, MapPin } from "lucide-react"
 import { Appointment } from "@/types";
 
 const DoctorDashboard = () => {
+  // Mock doctor data - in production, this would come from auth context or API
+  const doctorName = "Dr. Johnson";
+
   const [appointments] = useState<Appointment[]>([
     {
       id: "1",
@@ -52,8 +55,12 @@ const DoctorDashboard = () => {
       <main className="flex-1 pt-24 pb-16 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-2">Doctor Dashboard</h1>
-            <p className="text-muted-foreground">Manage your appointments and patients</p>
+            <h1 className="text-4xl font-bold mb-2">
+              Good day, <span className="text-primary">{doctorName}</span>!
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              Ready to make a difference today? Here's your schedule and patient overview.
+            </p>
           </div>
 
           <div className="grid md:grid-cols-4 gap-6 mb-8">
