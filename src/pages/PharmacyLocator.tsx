@@ -4,9 +4,11 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import PharmacyCard from "@/components/PharmacyCard";
 import PharmacyFilters from "@/components/PharmacyFilters";
-import { mockPharmacies } from "@/data/mockPharmacies";
+import { pharmacyDataService } from "@/services/pharmacyDataService";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Pill, X } from "lucide-react";
+import { Pharmacy } from "@/types";
 
 const PharmacyLocator = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -15,12 +17,37 @@ const PharmacyLocator = () => {
   const medicinesParam = searchParams.get("medicines");
   const prescribedMedicines = medicinesParam ? medicinesParam.split(",") : [];
 
+  // State management
+  const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [location, setLocation] = useState("All Locations");
   const [medication, setMedication] = useState("All Medications");
   const [open24Hours, setOpen24Hours] = useState(false);
   const [deliveryAvailable, setDeliveryAvailable] = useState(false);
   const [acceptsInsurance, setAcceptsInsurance] = useState(false);
+
+  // Fetch pharmacies on component mount
+  useEffect(() => {
+    const fetchPharmacies = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const pharmaciesData = await pharmacyDataService.getPharmacies();
+        setPharmacies(pharmaciesData);
+      } catch (err) {
+        console.error("Error fetching pharmacies:", err);
+        setError("Failed to load pharmacies. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPharmacies();
+  }, []);
 
   // Set search query from prescribed medicines on mount
   useEffect(() => {
@@ -43,7 +70,7 @@ const PharmacyLocator = () => {
     }
   };
 
-  const filteredPharmacies = mockPharmacies.filter((pharmacy) => {
+  const filteredPharmacies = pharmacies.filter((pharmacy) => {
     // If prescribed medicines are set, check if pharmacy has ANY of them
     let matchesPrescribedMedicines = true;
     if (prescribedMedicines.length > 0) {
@@ -83,6 +110,38 @@ const PharmacyLocator = () => {
       matchesInsurance
     );
   });
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navigation />
+        <main className="flex-1 pt-24 pb-16 flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <p className="mt-4 text-muted-foreground">Loading pharmacies...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navigation />
+        <main className="flex-1 pt-24 pb-16 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-destructive mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">

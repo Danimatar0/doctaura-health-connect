@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
+import Sidebar from "@/components/Sidebar";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,121 +9,93 @@ import { Calendar, FileText, Pill, User, Clock, MapPin, Video } from "lucide-rea
 import { Appointment, Prescription } from "@/types";
 import { useNavigate } from "react-router-dom";
 import PrescriptionMedicineSearch from "@/components/PrescriptionMedicineSearch";
+import { patientDataService } from "@/services/patientDataService";
 
 const PatientDashboard = () => {
   const navigate = useNavigate();
 
-  // Mock patient data - in production, this would come from auth context or API
-  const patientName = "Sarah";
-  
-  const [appointments] = useState<Appointment[]>([
-    {
-      id: "1",
-      doctorId: "1",
-      doctorName: "Dr. Sarah Johnson",
-      specialty: "Cardiology",
-      date: "2025-10-25",
-      time: "10:00 AM",
-      status: "upcoming",
-      type: "in-person",
-      location: "Beirut Medical Center",
-    },
-    {
-      id: "2",
-      doctorId: "2",
-      doctorName: "Dr. Ahmad Hassan",
-      specialty: "Pediatrics",
-      date: "2025-10-28",
-      time: "02:00 PM",
-      status: "upcoming",
-      type: "video",
-    },
-    {
-      id: "3",
-      doctorId: "3",
-      doctorName: "Dr. Maya Khalil",
-      specialty: "Dermatology",
-      date: "2025-10-15",
-      time: "11:00 AM",
-      status: "completed",
-      type: "in-person",
-      location: "Tripoli Clinic",
-    },
-  ]);
+  // State for all patient data
+  const [patientName, setPatientName] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [dashboardStats, setDashboardStats] = useState({ recordsCount: 0, doctorsCount: 0 });
 
-  const [prescriptions] = useState<Prescription[]>([
-    {
-      id: "1",
-      doctorId: "3",
-      doctorName: "Dr. Maya Khalil",
-      date: "2025-10-15",
-      diagnosis: "Bacterial Infection",
-      medications: [
-        {
-          name: "Amoxicillin",
-          dosage: "500mg",
-          frequency: "3 times daily",
-          duration: "7 days",
-          instructions: "Take with food",
-        },
-        {
-          name: "Paracetamol",
-          dosage: "500mg",
-          frequency: "As needed",
-          duration: "5 days",
-          instructions: "For fever or pain",
-        },
-      ],
-      notes: "Complete the full course of antibiotics even if feeling better",
-    },
-    {
-      id: "2",
-      doctorId: "1",
-      doctorName: "Dr. Sarah Johnson",
-      date: "2025-10-10",
-      diagnosis: "Hypertension",
-      medications: [
-        {
-          name: "Lisinopril",
-          dosage: "10mg",
-          frequency: "Once daily",
-          duration: "Ongoing",
-          instructions: "Take in the morning",
-        },
-      ],
-      notes: "Monitor blood pressure regularly",
-    },
-    {
-      id: "3",
-      doctorId: "2",
-      doctorName: "Dr. Ahmad Hassan",
-      date: "2025-10-05",
-      diagnosis: "Vitamin Deficiency",
-      medications: [
-        {
-          name: "Vitamin D3",
-          dosage: "1000 IU",
-          frequency: "Once daily",
-          duration: "3 months",
-        },
-        {
-          name: "Multivitamin",
-          dosage: "1 tablet",
-          frequency: "Once daily",
-          duration: "Ongoing",
-        },
-      ],
-    },
-  ]);
+  // Fetch all patient data on component mount
+  useEffect(() => {
+    const fetchPatientData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch all data in parallel for better performance
+        const [profile, appointmentsData, prescriptionsData, stats] = await Promise.all([
+          patientDataService.getPatientProfile(),
+          patientDataService.getAppointments(),
+          patientDataService.getPrescriptions(),
+          patientDataService.getDashboardStats(),
+        ]);
+
+        // Update state with fetched data
+        setPatientName(profile.name);
+        setAppointments(appointmentsData);
+        setPrescriptions(prescriptionsData);
+        setDashboardStats(stats);
+      } catch (err) {
+        console.error("Error fetching patient data:", err);
+        setError("Failed to load patient data. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPatientData();
+  }, []);
 
   const upcomingAppointments = appointments.filter(a => a.status === 'upcoming');
   const pastAppointments = appointments.filter(a => a.status === 'completed');
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navigation />
+        <Sidebar />
+        <main className="flex-1 pt-24 pb-16 pl-64 bg-muted/30 flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <p className="mt-4 text-muted-foreground">Loading your dashboard...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navigation />
+        <Sidebar />
+        <main className="flex-1 pt-24 pb-16 pl-64 bg-muted/30 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-destructive mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navigation />
-      
-      <main className="flex-1 pt-24 pb-16 bg-muted/30">
+      <Sidebar />
+
+      <main className="flex-1 pt-24 pb-16 pl-64 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <h1 className="text-4xl font-bold mb-2">
@@ -155,7 +128,7 @@ const PatientDashboard = () => {
                     <FileText className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">8</p>
+                    <p className="text-2xl font-bold">{dashboardStats.recordsCount}</p>
                     <p className="text-sm text-muted-foreground">Records</p>
                   </div>
                 </div>
@@ -183,7 +156,7 @@ const PatientDashboard = () => {
                     <User className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">5</p>
+                    <p className="text-2xl font-bold">{dashboardStats.doctorsCount}</p>
                     <p className="text-sm text-muted-foreground">Doctors</p>
                   </div>
                 </div>

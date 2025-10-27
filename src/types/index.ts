@@ -104,3 +104,28 @@ export interface MedicalRecord {
     type: string;
   }[];
 }
+
+// Doctor-specific types
+export interface DoctorAppointment {
+  id: string;
+  patientId: string;
+  patientName: string;
+  reason: string; // reason for appointment (consultation, checkup, etc.)
+  date: string;
+  time: string;
+  status: 'upcoming' | 'completed' | 'cancelled';
+  type: 'in-person' | 'video';
+  location?: string;
+}
+
+export interface DoctorStats {
+  todayAppointments: number;
+  totalPatients: number;
+  weekAppointments: number;
+  monthlyRevenue: number;
+}
+
+export interface WeeklySchedule {
+  day: string;
+  appointmentCount: number;
+}

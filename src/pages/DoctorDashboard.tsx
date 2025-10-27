@@ -1,58 +1,101 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
+import Sidebar from "@/components/Sidebar";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, Users, Clock, DollarSign, Video, MapPin } from "lucide-react";
-import { Appointment } from "@/types";
+import { DoctorAppointment, DoctorStats, WeeklySchedule } from "@/types";
+import { doctorDataService } from "@/services/doctorDataService";
 
 const DoctorDashboard = () => {
-  // Mock doctor data - in production, this would come from auth context or API
-  const doctorName = "Dr. Johnson";
+  // State for all doctor data
+  const [doctorName, setDoctorName] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [appointments, setAppointments] = useState<DoctorAppointment[]>([]);
+  const [stats, setStats] = useState<DoctorStats>({
+    todayAppointments: 0,
+    totalPatients: 0,
+    weekAppointments: 0,
+    monthlyRevenue: 0,
+  });
+  const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule[]>([]);
 
-  const [appointments] = useState<Appointment[]>([
-    {
-      id: "1",
-      doctorId: "1",
-      doctorName: "John Smith",
-      specialty: "General Checkup",
-      date: "2025-10-20",
-      time: "09:00 AM",
-      status: "upcoming",
-      type: "in-person",
-      location: "Clinic Room 1",
-    },
-    {
-      id: "2",
-      doctorId: "1",
-      doctorName: "Sarah Williams",
-      specialty: "Follow-up",
-      date: "2025-10-20",
-      time: "10:00 AM",
-      status: "upcoming",
-      type: "video",
-    },
-    {
-      id: "3",
-      doctorId: "1",
-      doctorName: "Mike Johnson",
-      specialty: "Consultation",
-      date: "2025-10-20",
-      time: "11:00 AM",
-      status: "upcoming",
-      type: "in-person",
-      location: "Clinic Room 2",
-    },
-  ]);
+  // Fetch all doctor data on component mount
+  useEffect(() => {
+    const fetchDoctorData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch all data in parallel
+        const [profile, appointmentsData, statsData, scheduleData] = await Promise.all([
+          doctorDataService.getDoctorProfile(),
+          doctorDataService.getAppointments(),
+          doctorDataService.getStats(),
+          doctorDataService.getWeeklySchedule(),
+        ]);
+
+        // Update state with fetched data
+        setDoctorName(profile.name);
+        setAppointments(appointmentsData);
+        setStats(statsData);
+        setWeeklySchedule(scheduleData);
+      } catch (err) {
+        console.error("Error fetching doctor data:", err);
+        setError("Failed to load dashboard data. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDoctorData();
+  }, []);
 
   const todayAppointments = appointments.filter(a => a.status === 'upcoming');
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navigation />
+        <Sidebar />
+        <main className="flex-1 pt-24 pb-16 pl-64 bg-muted/30 flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <p className="mt-4 text-muted-foreground">Loading your dashboard...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navigation />
+        <Sidebar />
+        <main className="flex-1 pt-24 pb-16 pl-64 bg-muted/30 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-destructive mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
       <Navigation />
-      
-      <main className="flex-1 pt-24 pb-16 bg-muted/30">
+      <Sidebar />
+
+      <main className="flex-1 pt-24 pb-16 pl-64 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <h1 className="text-4xl font-bold mb-2">
@@ -85,7 +128,7 @@ const DoctorDashboard = () => {
                     <Users className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">156</p>
+                    <p className="text-2xl font-bold">{stats.totalPatients}</p>
                     <p className="text-sm text-muted-foreground">Total Patients</p>
                   </div>
                 </div>
@@ -99,7 +142,7 @@ const DoctorDashboard = () => {
                     <Clock className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">32</p>
+                    <p className="text-2xl font-bold">{stats.weekAppointments}</p>
                     <p className="text-sm text-muted-foreground">This Week</p>
                   </div>
                 </div>
@@ -113,7 +156,7 @@ const DoctorDashboard = () => {
                     <DollarSign className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">$2.4k</p>
+                    <p className="text-2xl font-bold">${(stats.monthlyRevenue / 1000).toFixed(1)}k</p>
                     <p className="text-sm text-muted-foreground">This Month</p>
                   </div>
                 </div>
@@ -141,8 +184,8 @@ const DoctorDashboard = () => {
                           <CardContent className="pt-6">
                             <div className="flex justify-between items-start mb-4">
                               <div>
-                                <h4 className="font-bold text-lg">{apt.doctorName}</h4>
-                                <p className="text-primary">{apt.specialty}</p>
+                                <h4 className="font-bold text-lg">{apt.patientName}</h4>
+                                <p className="text-primary">{apt.reason}</p>
                               </div>
                               <div className="text-right">
                                 <p className="font-bold text-lg">{apt.time}</p>
@@ -192,20 +235,20 @@ const DoctorDashboard = () => {
                         .map((apt) => (
                           <Card key={apt.id} className="border-l-4 border-l-primary">
                             <CardContent className="pt-6">
-                              <h4 className="font-bold text-lg mb-2">{apt.doctorName}</h4>
+                              <h4 className="font-bold text-lg mb-2">{apt.patientName}</h4>
                               <p className="text-sm text-muted-foreground">{apt.time} - {apt.location}</p>
                             </CardContent>
                           </Card>
                         ))}
                     </TabsContent>
-                    
+
                     <TabsContent value="video" className="space-y-4">
                       {todayAppointments
                         .filter(apt => apt.type === 'video')
                         .map((apt) => (
                           <Card key={apt.id} className="border-l-4 border-l-secondary">
                             <CardContent className="pt-6">
-                              <h4 className="font-bold text-lg mb-2">{apt.doctorName}</h4>
+                              <h4 className="font-bold text-lg mb-2">{apt.patientName}</h4>
                               <p className="text-sm text-muted-foreground">{apt.time} - Video Call</p>
                             </CardContent>
                           </Card>
@@ -243,26 +286,21 @@ const DoctorDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Monday</span>
-                      <span className="font-medium">8 appointments</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Tuesday</span>
-                      <span className="font-medium">6 appointments</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Wednesday</span>
-                      <span className="font-medium">10 appointments</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Thursday</span>
-                      <span className="font-medium">5 appointments</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Friday</span>
-                      <span className="font-medium">3 appointments</span>
-                    </div>
+                    {weeklySchedule
+                      .filter(day => day.appointmentCount > 0)
+                      .map((day, index) => (
+                        <div key={index} className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">{day.day}</span>
+                          <span className="font-medium">
+                            {day.appointmentCount} {day.appointmentCount === 1 ? 'appointment' : 'appointments'}
+                          </span>
+                        </div>
+                      ))}
+                    {weeklySchedule.filter(day => day.appointmentCount > 0).length === 0 && (
+                      <p className="text-center text-muted-foreground py-4">
+                        No appointments scheduled this week
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>

@@ -36,6 +36,9 @@ export const env = {
     // "webapp" = show role selector in web app (Scenario 1)
     // "keycloak" = use Keycloak theme with role tabs (Scenario 2)
     registrationStrategy: (import.meta.env.VITE_REGISTRATION_STRATEGY || "webapp") as "webapp" | "keycloak",
+    // Data Source: "mock" or "api"
+    // Toggle between mock data and real API calls
+    useMockData: import.meta.env.VITE_USE_MOCK_DATA !== "false", // Default to true for development
   },
 } as const;
 

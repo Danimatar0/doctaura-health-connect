@@ -59,7 +59,7 @@ const Register = () => {
               </div>
               <h1 className="text-4xl font-bold mb-3">Join Doctaura Today</h1>
               <p className="text-lg text-muted-foreground">
-                Create your account with secure Keycloak authentication
+                Create your account with our secure authentication
               </p>
             </div>
 

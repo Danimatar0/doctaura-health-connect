@@ -33,7 +33,7 @@ const Login = () => {
               </div>
               <h1 className="text-4xl font-bold mb-3">Welcome Back to Doctaura</h1>
               <p className="text-lg text-muted-foreground">
-                Sign in securely with Keycloak authentication
+                Sign in securely to your account
               </p>
             </div>
 
@@ -105,7 +105,7 @@ const Login = () => {
                 className="gradient-hero text-white shadow-soft hover:shadow-hover transition-smooth px-12 text-lg h-14"
               >
                 <Shield className="h-5 w-5 mr-2" />
-                Continue with Keycloak
+                Continue to Doctaura
                 <ArrowRight className="h-5 w-5 ml-2" />
               </Button>
             </div>
@@ -116,10 +116,10 @@ const Login = () => {
                 <div className="flex items-start gap-3">
                   <Shield className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                   <div className="space-y-2">
-                    <h3 className="font-semibold text-foreground">Secure Authentication with Keycloak</h3>
+                    <h3 className="font-semibold text-foreground">Enterprise-Grade Security</h3>
                     <p className="text-sm text-muted-foreground">
-                      Your credentials are protected with enterprise-grade security. Keycloak handles all
-                      authentication securely, and we never store your password.
+                      Your credentials are protected with industry-leading security standards and encryption.
+                      We never store your password.
                     </p>
                   </div>
                 </div>

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
+import Sidebar from "@/components/Sidebar";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,106 +32,37 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { medicalRecordsDataService } from "@/services/medicalRecordsDataService";
 
 const MedicalRecords = () => {
   const navigate = useNavigate();
 
-  const [records] = useState<MedicalRecord[]>([
-    {
-      id: "1",
-      type: "visit",
-      title: "General Checkup",
-      date: "2025-10-15",
-      doctorId: "3",
-      doctorName: "Dr. Maya Khalil",
-      specialty: "Dermatology",
-      facility: "Tripoli Clinic",
-      diagnosis: "Bacterial Skin Infection",
-      symptoms: ["Rash", "Itching", "Redness"],
-      treatment: "Prescribed antibiotics and topical cream",
-      prescriptions: ["Amoxicillin 500mg", "Hydrocortisone Cream"],
-      followUpDate: "2025-10-22",
-      notes: "Patient responding well to treatment. Follow up in one week.",
-    },
-    {
-      id: "2",
-      type: "lab",
-      title: "Blood Test - Complete Blood Count",
-      date: "2025-10-10",
-      doctorId: "1",
-      doctorName: "Dr. Sarah Johnson",
-      specialty: "Cardiology",
-      facility: "Beirut Medical Center",
-      labResults: [
-        {
-          test: "Hemoglobin",
-          result: "14.2 g/dL",
-          normalRange: "13.5-17.5 g/dL",
-          status: "normal",
-        },
-        {
-          test: "White Blood Cells",
-          result: "7.5 x10^9/L",
-          normalRange: "4.0-11.0 x10^9/L",
-          status: "normal",
-        },
-        {
-          test: "Platelets",
-          result: "250 x10^9/L",
-          normalRange: "150-400 x10^9/L",
-          status: "normal",
-        },
-        {
-          test: "Cholesterol",
-          result: "220 mg/dL",
-          normalRange: "<200 mg/dL",
-          status: "abnormal",
-        },
-      ],
-      notes: "Cholesterol slightly elevated. Recommend dietary changes.",
-    },
-    {
-      id: "3",
-      type: "imaging",
-      title: "Chest X-Ray",
-      date: "2025-09-28",
-      doctorId: "1",
-      doctorName: "Dr. Sarah Johnson",
-      specialty: "Cardiology",
-      facility: "Beirut Medical Center",
-      imagingResults: {
-        type: "X-Ray",
-        findings: "No acute cardiopulmonary abnormalities. Heart size normal. Lungs clear.",
-      },
-      notes: "Routine screening. Results normal.",
-    },
-    {
-      id: "4",
-      type: "vaccination",
-      title: "Annual Flu Vaccination",
-      date: "2025-09-15",
-      doctorId: "2",
-      doctorName: "Dr. Ahmad Hassan",
-      specialty: "Pediatrics",
-      facility: "Family Health Center",
-      treatment: "Influenza vaccine administered - Quadrivalent",
-      notes: "No adverse reactions. Next dose due in 12 months.",
-    },
-    {
-      id: "5",
-      type: "procedure",
-      title: "Minor Skin Procedure",
-      date: "2025-08-20",
-      doctorId: "3",
-      doctorName: "Dr. Maya Khalil",
-      specialty: "Dermatology",
-      facility: "Tripoli Clinic",
-      diagnosis: "Benign skin lesion",
-      treatment: "Lesion removed via local excision. Sent for biopsy.",
-      notes: "Biopsy results: Benign. No further treatment required.",
-    },
-  ]);
+  // State management
+  const [records, setRecords] = useState<MedicalRecord[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // Fetch medical records on component mount
+  useEffect(() => {
+    const fetchMedicalRecords = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const recordsData = await medicalRecordsDataService.getMedicalRecords();
+        setRecords(recordsData);
+      } catch (err) {
+        console.error("Error fetching medical records:", err);
+        setError("Failed to load medical records. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMedicalRecords();
+  }, []);
+
+  // Helper functions
   const getRecordIcon = (type: MedicalRecord['type']) => {
     switch (type) {
       case 'visit':
@@ -184,6 +116,40 @@ const MedicalRecords = () => {
     vaccination: records.filter(r => r.type === 'vaccination'),
     procedure: records.filter(r => r.type === 'procedure'),
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navigation />
+        <Sidebar />
+        <main className="flex-1 pt-24 pb-16 pl-64 bg-muted/30 flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <p className="mt-4 text-muted-foreground">Loading medical records...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navigation />
+        <Sidebar />
+        <main className="flex-1 pt-24 pb-16 pl-64 bg-muted/30 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-destructive mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   const RecordCard = ({ record }: { record: MedicalRecord }) => (
     <Dialog>
@@ -389,8 +355,9 @@ const MedicalRecords = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Navigation />
+      <Sidebar />
 
-      <main className="flex-1 pt-24 pb-16 bg-muted/30">
+      <main className="flex-1 pt-24 pb-16 pl-64 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           {/* Back Button */}
           <Button
