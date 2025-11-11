@@ -16,6 +16,7 @@ import {
   AuthStorageKeys,
   OAuthState,
   EmailVerificationStatus,
+  ProfileUpdateData,
 } from "@/types/auth.types";
 
 /**
@@ -422,6 +423,122 @@ class KeycloakService implements IAuthService {
   }
 
   /**
+   * Update user profile
+   */
+  async updateProfile(data: ProfileUpdateData): Promise<AuthUser> {
+    try {
+      const user = this.getCurrentUser();
+      if (!user) {
+        throw new AuthError(AuthErrorCode.UNAUTHORIZED, "User not authenticated");
+      }
+
+      // Prepare update payload for Keycloak Account API
+      const updatePayload: {
+        firstName?: string;
+        lastName?: string;
+        attributes?: Record<string, string[]>;
+      } = {};
+
+      if (data.firstName !== undefined) {
+        updatePayload.firstName = data.firstName;
+      }
+
+      if (data.lastName !== undefined) {
+        updatePayload.lastName = data.lastName;
+      }
+
+      // Prepare attributes object for custom fields
+      const attributes: Record<string, string[]> = {};
+
+      if (data.phone !== undefined) {
+        attributes.phone = [data.phone];
+      }
+      if (data.gender !== undefined) {
+        attributes.gender = [data.gender];
+      }
+      if (data.dateOfBirth !== undefined) {
+        attributes.dateOfBirth = [data.dateOfBirth];
+      }
+      if (data.country !== undefined) {
+        attributes.country = [data.country];
+      }
+      if (data.locale !== undefined) {
+        attributes.locale = [data.locale];
+      }
+      if (data.bloodType !== undefined) {
+        attributes.bloodType = [data.bloodType];
+      }
+      if (data.specialty !== undefined) {
+        attributes.specialty = [data.specialty];
+      }
+      if (data.medicalCertification !== undefined) {
+        attributes.medicalCertification = [data.medicalCertification];
+      }
+
+      if (Object.keys(attributes).length > 0) {
+        updatePayload.attributes = attributes;
+      }
+
+      // Call Keycloak Account API to update profile
+      const response = await fetch(this.endpoints.account, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.accessToken}`,
+        },
+        body: JSON.stringify(updatePayload),
+      });
+
+      if (!response.ok) {
+        throw await this.handleErrorResponse(response);
+      }
+
+      // Refresh user info after update
+      const userInfoResponse = await fetch(this.endpoints.userInfo, {
+        headers: {
+          Authorization: `Bearer ${user.accessToken}`,
+        },
+      });
+
+      if (!userInfoResponse.ok) {
+        throw new AuthError(AuthErrorCode.SERVER_ERROR, "Failed to fetch updated user info");
+      }
+
+      const userInfo: KeycloakUserInfo = await userInfoResponse.json();
+
+      // Extract custom attributes
+      const extractAttribute = (key: string): string | undefined => {
+        const value = userInfo.attributes?.[key];
+        return Array.isArray(value) ? value[0] : value;
+      };
+
+      // Update the user object with new data
+      const updatedUser: AuthUser = {
+        ...user,
+        name: userInfo.name || user.name,
+        firstName: userInfo.given_name || data.firstName,
+        lastName: userInfo.family_name || data.lastName,
+        phone: userInfo.phone_number || extractAttribute("phone") || data.phone,
+        gender: extractAttribute("gender") || data.gender,
+        dateOfBirth: extractAttribute("dateOfBirth") || data.dateOfBirth,
+        country: extractAttribute("country") || data.country,
+        locale: extractAttribute("locale") || userInfo.locale || data.locale,
+        bloodType: extractAttribute("bloodType") || data.bloodType,
+        specialty: extractAttribute("specialty") || data.specialty,
+        medicalCertification: extractAttribute("medicalCertification") || data.medicalCertification,
+        roleAssignedAt: extractAttribute("role_assigned_at"),
+      };
+
+      // Save updated user to storage
+      this.saveUser(updatedUser);
+
+      return updatedUser;
+    } catch (error) {
+      throw this.normalizeError(error);
+    }
+  }
+
+  /**
    * Get current authenticated user
    */
   getCurrentUser(): AuthUser | null {
@@ -550,6 +667,12 @@ class KeycloakService implements IAuthService {
 
     const expiresAt = Date.now() + (tokens.expires_in * 1000);
 
+    // Extract custom attributes
+    const extractAttribute = (key: string): string | undefined => {
+      const value = userInfo.attributes?.[key];
+      return Array.isArray(value) ? value[0] : value;
+    };
+
     return {
       id: userInfo.sub,
       email: userInfo.email,
@@ -565,6 +688,17 @@ class KeycloakService implements IAuthService {
       idToken: tokens.id_token,
       expiresAt,
       provider: "keycloak",
+      // Additional user attributes
+      gender: extractAttribute("gender"),
+      dateOfBirth: extractAttribute("dateOfBirth"),
+      country: extractAttribute("country"),
+      locale: extractAttribute("locale") || userInfo.locale,
+      bloodType: extractAttribute("bloodType"),
+      // Doctor-specific fields
+      specialty: extractAttribute("specialty"),
+      medicalCertification: extractAttribute("medicalCertification"),
+      // Metadata
+      roleAssignedAt: extractAttribute("role_assigned_at"),
     };
   }
 

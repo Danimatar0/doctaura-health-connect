@@ -1,4 +1,4 @@
-import { Heart } from "lucide-react";
+import doctauraLogo from "@/assets/doctaura_icon.png";
 
 const Footer = () => {
   return (
@@ -7,8 +7,7 @@ const Footer = () => {
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <Heart className="h-6 w-6" fill="currentColor" />
-              <span className="text-xl font-bold">Doctaura</span>
+              <img src={doctauraLogo} alt="Doctaura" className="h-8 w-auto brightness-0 invert" />
             </div>
             <p className="text-background/70">
               Your health, connected across Lebanon and MENA.

@@ -27,6 +27,17 @@ export interface AuthUser {
   idToken?: string;
   expiresAt: number;
   provider: AuthProvider;
+  // Additional user attributes from Keycloak
+  gender?: string;
+  dateOfBirth?: string;
+  country?: string;
+  locale?: string;
+  bloodType?: string;
+  // Doctor-specific fields
+  specialty?: string;
+  medicalCertification?: string;
+  // Metadata
+  roleAssignedAt?: string;
 }
 
 /**
@@ -106,6 +117,24 @@ export interface PasswordResetConfirmation {
   token: string;
   newPassword: string;
   confirmPassword: string;
+}
+
+/**
+ * Profile update data
+ */
+export interface ProfileUpdateData {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  gender?: string;
+  dateOfBirth?: string;
+  country?: string;
+  locale?: string;
+  bloodType?: string;
+  // Doctor-specific fields
+  specialty?: string;
+  medicalCertification?: string;
+  // email, id, and role are immutable
 }
 
 /**

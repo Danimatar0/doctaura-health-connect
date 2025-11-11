@@ -96,6 +96,11 @@ const Sidebar = ({ className }: SidebarProps) => {
     await keycloakService.logout();
   };
 
+  const handleProfileClick = () => {
+    const profilePath = userRole === "doctor" ? "/doctor/profile" : "/patient/profile";
+    navigate(profilePath);
+  };
+
   const isActivePath = (path: string) => {
     return location.pathname === path;
   };
@@ -112,7 +117,18 @@ const Sidebar = ({ className }: SidebarProps) => {
         {/* User Info Section */}
         {!isCollapsed && (
           <div className="p-4 border-b border-border">
-            <div className="flex items-center gap-3">
+            <div
+              className="flex items-center gap-3 cursor-pointer hover:bg-accent/50 -m-2 p-2 rounded-lg transition-colors"
+              onClick={handleProfileClick}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleProfileClick();
+                }
+              }}
+            >
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <User className="h-5 w-5 text-primary" />
               </div>
@@ -127,7 +143,19 @@ const Sidebar = ({ className }: SidebarProps) => {
         {/* Collapsed user indicator */}
         {isCollapsed && (
           <div className="p-3 border-b border-border flex justify-center">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+            <div
+              className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center cursor-pointer hover:bg-primary/20 transition-colors"
+              onClick={handleProfileClick}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleProfileClick();
+                }
+              }}
+              title="My Profile"
+            >
               <User className="h-5 w-5 text-primary" />
             </div>
           </div>

@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Heart, Search, MapPin, LogIn, UserCircle, Menu } from "lucide-react";
+import { Search, MapPin, LogIn, UserCircle, Menu } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { keycloakService } from "@/services/keycloakService";
 import { useState, useEffect } from "react";
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import doctauraLogo from "@/assets/doctaura_icon.png";
 
 const Navigation = () => {
   const navigate = useNavigate();
@@ -67,8 +68,7 @@ const Navigation = () => {
             className="flex items-center gap-2 cursor-pointer"
             onClick={() => navigate('/')}
           >
-            <Heart className="h-6 w-6 text-primary" fill="currentColor" />
-            <span className="text-xl font-bold text-foreground hidden sm:inline">Doctaura</span>
+            <img src={doctauraLogo} alt="Doctaura" className="h-8 w-auto" />
           </div>
 
           {/* Desktop Navigation - Center */}
@@ -141,7 +141,7 @@ const Navigation = () => {
                   <SheetContent side="right" className="w-[280px]">
                     <SheetHeader>
                       <SheetTitle className="flex items-center gap-2">
-                        <Heart className="h-5 w-5 text-primary" fill="currentColor" />
+                        <img src={doctauraLogo} alt="Doctaura" className="h-6 w-auto" />
                         Menu
                       </SheetTitle>
                     </SheetHeader>
@@ -220,7 +220,7 @@ const Navigation = () => {
                   <SheetContent side="right" className="w-[280px]">
                     <SheetHeader>
                       <SheetTitle className="flex items-center gap-2">
-                        <Heart className="h-5 w-5 text-primary" fill="currentColor" />
+                        <img src={doctauraLogo} alt="Doctaura" className="h-6 w-auto" />
                         Menu
                       </SheetTitle>
                     </SheetHeader>
