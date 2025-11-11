@@ -241,7 +241,6 @@ class KeycloakService implements IAuthService {
    */
   async logout(): Promise<void> {
     const user = this.getCurrentUser();
-
     if (user) {
       try {
         const body = new URLSearchParams({
@@ -266,6 +265,9 @@ class KeycloakService implements IAuthService {
     }
 
     this.clearSession();
+
+    // Redirect to landing page after logout
+    window.location.href = "/";
   }
 
   /**
