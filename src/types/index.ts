@@ -130,6 +130,17 @@ export interface WeeklySchedule {
   appointmentCount: number;
 }
 
+// Clinic types
+export interface Clinic {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+  email?: string;
+  city: string;
+  country: string;
+}
+
 // Schedule Settings types
 export interface DaySchedule {
   startTime: string;
@@ -140,6 +151,7 @@ export interface DaySchedule {
 export interface ScheduleSettings {
   id: string;
   doctorId: string;
+  clinicId: string;
   weeklySchedule: {
     monday: DaySchedule;
     tuesday: DaySchedule;
@@ -153,4 +165,22 @@ export interface ScheduleSettings {
   bufferTime: number; // in minutes
   maxPatientsPerDay: number;
   lastUpdated: string;
+}
+
+// Blocked Time types
+export type BlockedTimeReason = "holiday" | "break" | "emergency" | "personal-leave" | "custom";
+
+export interface BlockedTimeSlot {
+  id: string;
+  doctorId: string;
+  clinicId: string;
+  startDate: string; // ISO date string
+  endDate: string; // ISO date string (same as startDate for single day)
+  startTime?: string; // Optional - omit for all-day blocks (HH:mm format)
+  endTime?: string; // Optional - omit for all-day blocks (HH:mm format)
+  isAllDay: boolean;
+  reason: BlockedTimeReason;
+  customReason?: string; // Only when reason is "custom"
+  note?: string;
+  createdAt: string;
 }
