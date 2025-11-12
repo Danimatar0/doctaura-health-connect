@@ -14,7 +14,7 @@ import { env } from "@/config/env";
 import { Appointment, Prescription, Patient } from "@/types";
 import { mockAppointments } from "@/data/mockAppointments";
 import { mockPrescriptions } from "@/data/mockPrescriptions";
-import { mockPatientProfile, mockDashboardStats } from "@/data/mockPatientProfile";
+import { getMockPatientProfile, mockDashboardStats } from "@/data/mockPatientProfile";
 
 // API endpoints
 const API_ENDPOINTS = {
@@ -36,9 +36,9 @@ const getMockPrescriptions = async (): Promise<Prescription[]> => {
   return mockPrescriptions;
 };
 
-const getMockPatientProfile = async (): Promise<Patient> => {
+const getMockPatientProfileData = async (): Promise<Patient> => {
   await new Promise(resolve => setTimeout(resolve, 100));
-  return mockPatientProfile;
+  return getMockPatientProfile();
 };
 
 const getMockDashboardStats = async (): Promise<typeof mockDashboardStats> => {
@@ -134,7 +134,7 @@ export const patientDataService = {
    */
   getPatientProfile: async (): Promise<Patient> => {
     if (env.features.useMockData) {
-      return getMockPatientProfile();
+      return getMockPatientProfileData();
     }
     return getApiPatientProfile();
   },

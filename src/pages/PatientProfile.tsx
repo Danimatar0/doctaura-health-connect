@@ -10,7 +10,6 @@ import {
   User,
   Mail,
   Phone,
-  Calendar,
   Shield,
   Edit,
   CheckCircle2,
@@ -118,11 +117,11 @@ const PatientProfile = () => {
                   </div>
                 </div>
                 <CardTitle className="text-2xl">{user.name}</CardTitle>
-                <CardDescription className="mt-2">
+                <div className="mt-2">
                   <Badge variant="secondary" className="capitalize">
                     {user.role}
                   </Badge>
-                </CardDescription>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -229,23 +228,6 @@ const PatientProfile = () => {
                     <p className="mt-1 text-base text-xs font-mono truncate" title={user.id}>
                       {user.id}
                     </p>
-                  </div>
-                </div>
-
-                <Separator className="my-6" />
-
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-3">
-                    Account Status
-                  </h3>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">
-                        Token expires:{" "}
-                        {new Date(user.expiresAt).toLocaleString()}
-                      </span>
-                    </div>
                   </div>
                 </div>
               </CardContent>

@@ -19,6 +19,10 @@ import MedicalRecords from "./pages/MedicalRecords";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import PatientProfile from "./pages/PatientProfile";
 import DoctorProfilePage from "./pages/DoctorProfilePage";
+import PatientAppointments from "./pages/PatientAppointments";
+import DoctorAppointments from "./pages/DoctorAppointments";
+import PatientPrescriptions from "./pages/PatientPrescriptions";
+import DoctorPrescriptions from "./pages/DoctorPrescriptions";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -104,7 +108,7 @@ const App = () => (
             path="/patient/appointments"
             element={
               <ProtectedRoute allowedRoles={["patient"]}>
-                <NotFound />
+                <PatientAppointments />
               </ProtectedRoute>
             }
           />
@@ -112,7 +116,7 @@ const App = () => (
             path="/patient/prescriptions"
             element={
               <ProtectedRoute allowedRoles={["patient"]}>
-                <NotFound />
+                <PatientPrescriptions />
               </ProtectedRoute>
             }
           />
@@ -154,7 +158,7 @@ const App = () => (
             path="/doctor/appointments"
             element={
               <ProtectedRoute allowedRoles={["doctor"]}>
-                <NotFound />
+                <DoctorAppointments />
               </ProtectedRoute>
             }
           />
@@ -171,6 +175,14 @@ const App = () => (
             element={
               <ProtectedRoute allowedRoles={["doctor"]}>
                 <NotFound />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/doctor/prescriptions"
+            element={
+              <ProtectedRoute allowedRoles={["doctor"]}>
+                <DoctorPrescriptions />
               </ProtectedRoute>
             }
           />

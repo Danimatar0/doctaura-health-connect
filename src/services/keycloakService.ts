@@ -522,7 +522,7 @@ class KeycloakService implements IAuthService {
         gender: extractAttribute("gender") || data.gender,
         dateOfBirth: extractAttribute("dateOfBirth") || data.dateOfBirth,
         country: extractAttribute("country") || data.country,
-        locale: extractAttribute("locale") || userInfo.locale || data.locale,
+        locale: extractAttribute("locale") || data.locale,
         bloodType: extractAttribute("bloodType") || data.bloodType,
         specialty: extractAttribute("specialty") || data.specialty,
         medicalCertification: extractAttribute("medicalCertification") || data.medicalCertification,
@@ -692,7 +692,7 @@ class KeycloakService implements IAuthService {
       gender: extractAttribute("gender"),
       dateOfBirth: extractAttribute("dateOfBirth"),
       country: extractAttribute("country"),
-      locale: extractAttribute("locale") || userInfo.locale,
+      locale: extractAttribute("locale"),
       bloodType: extractAttribute("bloodType"),
       // Doctor-specific fields
       specialty: extractAttribute("specialty"),
