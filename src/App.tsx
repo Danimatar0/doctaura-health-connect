@@ -19,6 +19,7 @@ import MedicalRecords from "./pages/MedicalRecords";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import PatientProfile from "./pages/PatientProfile";
 import DoctorProfilePage from "./pages/DoctorProfilePage";
+import ScheduleSettings from "./pages/ScheduleSettings";
 import PatientAppointments from "./pages/PatientAppointments";
 import DoctorAppointments from "./pages/DoctorAppointments";
 import PatientPrescriptions from "./pages/PatientPrescriptions";
@@ -202,6 +203,7 @@ const App = () => (
               </ProtectedRoute>
             }
           />
+          <Route path="/schedule-settings" element={<ScheduleSettings />} />
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
