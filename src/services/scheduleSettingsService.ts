@@ -11,19 +11,34 @@
  */
 
 import { env } from "@/config/env";
-import { ScheduleSettings } from "@/types";
+import { ScheduleSettings, Clinic } from "@/types";
 import { mockScheduleSettings } from "@/data/mockScheduleSettings";
+import { mockClinics } from "@/data/mockClinics";
 
 // API endpoints
 const API_ENDPOINTS = {
+  clinics: `${env.api.baseUrl}/api/doctor/clinics`,
   scheduleSettings: `${env.api.baseUrl}/api/doctor/schedule-settings`,
 };
 
 // Mock data functions
-const getMockScheduleSettings = async (): Promise<ScheduleSettings> => {
+const getMockClinics = async (): Promise<Clinic[]> => {
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 300));
+  return mockClinics;
+};
+
+const getMockAllScheduleSettings = async (): Promise<ScheduleSettings[]> => {
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 500));
   return mockScheduleSettings;
+};
+
+const getMockScheduleSettingsByClinic = async (clinicId: string): Promise<ScheduleSettings | null> => {
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 500));
+  const setting = mockScheduleSettings.find(s => s.clinicId === clinicId);
+  return setting || null;
 };
 
 const updateMockScheduleSettings = async (settings: ScheduleSettings): Promise<ScheduleSettings> => {
@@ -37,7 +52,22 @@ const updateMockScheduleSettings = async (settings: ScheduleSettings): Promise<S
 };
 
 // API data functions
-const getApiScheduleSettings = async (): Promise<ScheduleSettings> => {
+const getApiClinics = async (): Promise<Clinic[]> => {
+  const response = await fetch(API_ENDPOINTS.clinics, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch clinics: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+const getApiAllScheduleSettings = async (): Promise<ScheduleSettings[]> => {
   const response = await fetch(API_ENDPOINTS.scheduleSettings, {
     headers: {
       'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -52,8 +82,23 @@ const getApiScheduleSettings = async (): Promise<ScheduleSettings> => {
   return response.json();
 };
 
+const getApiScheduleSettingsByClinic = async (clinicId: string): Promise<ScheduleSettings | null> => {
+  const response = await fetch(`${API_ENDPOINTS.scheduleSettings}/${clinicId}`, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch schedule settings: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
 const updateApiScheduleSettings = async (settings: ScheduleSettings): Promise<ScheduleSettings> => {
-  const response = await fetch(API_ENDPOINTS.scheduleSettings, {
+  const response = await fetch(`${API_ENDPOINTS.scheduleSettings}/${settings.clinicId}`, {
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -72,17 +117,37 @@ const updateApiScheduleSettings = async (settings: ScheduleSettings): Promise<Sc
 // Public API
 export const scheduleSettingsService = {
   /**
-   * Get schedule settings for the doctor
+   * Get all clinics for the doctor
    */
-  getScheduleSettings: async (): Promise<ScheduleSettings> => {
+  getClinics: async (): Promise<Clinic[]> => {
     if (env.features.useMockData) {
-      return getMockScheduleSettings();
+      return getMockClinics();
     }
-    return getApiScheduleSettings();
+    return getApiClinics();
   },
 
   /**
-   * Update schedule settings
+   * Get all schedule settings for the doctor
+   */
+  getAllScheduleSettings: async (): Promise<ScheduleSettings[]> => {
+    if (env.features.useMockData) {
+      return getMockAllScheduleSettings();
+    }
+    return getApiAllScheduleSettings();
+  },
+
+  /**
+   * Get schedule settings for a specific clinic
+   */
+  getScheduleSettingsByClinic: async (clinicId: string): Promise<ScheduleSettings | null> => {
+    if (env.features.useMockData) {
+      return getMockScheduleSettingsByClinic(clinicId);
+    }
+    return getApiScheduleSettingsByClinic(clinicId);
+  },
+
+  /**
+   * Update schedule settings for a specific clinic
    */
   updateScheduleSettings: async (settings: ScheduleSettings): Promise<ScheduleSettings> => {
     if (env.features.useMockData) {

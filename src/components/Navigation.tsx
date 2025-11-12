@@ -121,7 +121,7 @@ const Navigation = () => {
                         Profile
                       </DropdownMenuItem>
                       {userRole === 'doctor' && (
-                        <DropdownMenuItem onClick={() => handleNavigate('/schedule-settings')}>
+                        <DropdownMenuItem onClick={() => handleNavigate('/doctor/schedule')}>
                           <Settings className="h-4 w-4 mr-2" />
                           Schedule Settings
                         </DropdownMenuItem>
@@ -191,7 +191,7 @@ const Navigation = () => {
                           <Button
                             variant="ghost"
                             className="w-full justify-start gap-2"
-                            onClick={() => handleNavigate('/schedule-settings')}
+                            onClick={() => handleNavigate('/doctor/schedule')}
                           >
                             <Settings className="h-4 w-4" />
                             Schedule Settings

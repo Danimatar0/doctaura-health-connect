@@ -9,17 +9,27 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ScheduleSettings as ScheduleSettingsType, DaySchedule } from "@/types";
+import { ScheduleSettings as ScheduleSettingsType, DaySchedule, Clinic, BlockedTimeSlot } from "@/types";
 import { scheduleSettingsService } from "@/services/scheduleSettingsService";
-import { Clock, Save, AlertCircle, Loader2 } from "lucide-react";
+import { blockedTimeService } from "@/services/blockedTimeService";
+import BlockTimeDialog from "@/components/BlockTimeDialog";
+import BlockedTimeList from "@/components/BlockedTimeList";
+import { Clock, Save, AlertCircle, Loader2, Building2, MapPin, Phone, Ban, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ScheduleSettings = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [clinics, setClinics] = useState<Clinic[]>([]);
+  const [selectedClinicId, setSelectedClinicId] = useState<string>("");
   const [settings, setSettings] = useState<ScheduleSettingsType | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  // Blocked time state
+  const [blockedSlots, setBlockedSlots] = useState<BlockedTimeSlot[]>([]);
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [loadingBlocked, setLoadingBlocked] = useState(false);
 
   const daysOfWeek = [
     { key: "monday", label: "Monday" },
@@ -32,23 +42,67 @@ const ScheduleSettings = () => {
   ];
 
   useEffect(() => {
-    const fetchSettings = async () => {
+    const fetchInitialData = async () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await scheduleSettingsService.getScheduleSettings();
-        setSettings(data);
+
+        // Fetch clinics first
+        const clinicsData = await scheduleSettingsService.getClinics();
+        setClinics(clinicsData);
+
+        // Select first clinic by default
+        if (clinicsData.length > 0) {
+          setSelectedClinicId(clinicsData[0].id);
+        }
       } catch (err) {
-        console.error("Error fetching settings:", err);
-        setError("Failed to load schedule settings. Please try again later.");
-        toast.error("Failed to load schedule settings");
+        console.error("Error fetching data:", err);
+        setError("Failed to load clinics. Please try again later.");
+        toast.error("Failed to load clinics");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSettings();
+    fetchInitialData();
   }, []);
+
+  // Fetch schedule settings when clinic selection changes
+  useEffect(() => {
+    const fetchScheduleSettings = async () => {
+      if (!selectedClinicId) return;
+
+      try {
+        const data = await scheduleSettingsService.getScheduleSettingsByClinic(selectedClinicId);
+        setSettings(data);
+      } catch (err) {
+        console.error("Error fetching schedule settings:", err);
+        toast.error("Failed to load schedule settings for this clinic");
+      }
+    };
+
+    fetchScheduleSettings();
+  }, [selectedClinicId]);
+
+  // Fetch blocked time slots when clinic selection changes
+  useEffect(() => {
+    const fetchBlockedTimeSlots = async () => {
+      if (!selectedClinicId) return;
+
+      try {
+        setLoadingBlocked(true);
+        const data = await blockedTimeService.getBlockedTimeSlots(selectedClinicId);
+        setBlockedSlots(data);
+      } catch (err) {
+        console.error("Error fetching blocked time slots:", err);
+        toast.error("Failed to load blocked time slots");
+      } finally {
+        setLoadingBlocked(false);
+      }
+    };
+
+    fetchBlockedTimeSlots();
+  }, [selectedClinicId]);
 
   const validateSettings = (): boolean => {
     const errors: Record<string, string> = {};
@@ -157,6 +211,32 @@ const ScheduleSettings = () => {
     }
   };
 
+  // Blocked time handlers
+  const handleCreateBlockedTime = async (blockData: Omit<BlockedTimeSlot, "id" | "doctorId" | "createdAt">) => {
+    try {
+      const newSlot = await blockedTimeService.createBlockedTimeSlot({
+        ...blockData,
+        doctorId: "doc-1", // This should come from auth context in production
+      });
+      setBlockedSlots([...blockedSlots, newSlot]);
+      toast.success("Time slot blocked successfully!");
+    } catch (err) {
+      console.error("Error creating blocked time slot:", err);
+      toast.error("Failed to block time slot. Please try again.");
+    }
+  };
+
+  const handleDeleteBlockedTime = async (id: string) => {
+    try {
+      await blockedTimeService.deleteBlockedTimeSlot(id);
+      setBlockedSlots(blockedSlots.filter(slot => slot.id !== id));
+      toast.success("Blocked time removed successfully!");
+    } catch (err) {
+      console.error("Error deleting blocked time slot:", err);
+      toast.error("Failed to remove blocked time. Please try again.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -210,6 +290,79 @@ const ScheduleSettings = () => {
           </div>
 
           <div className="space-y-6">
+            {/* Clinic Selector Card */}
+            <Card className="shadow-soft border-primary/20">
+              <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent">
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  Select Clinic
+                </CardTitle>
+                <CardDescription>
+                  Choose which clinic you want to manage the schedule for
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Clinic Selector */}
+                  <div className="space-y-3">
+                    <Label htmlFor="clinic-select" className="text-base font-semibold">
+                      Clinic
+                    </Label>
+                    <Select
+                      value={selectedClinicId}
+                      onValueChange={setSelectedClinicId}
+                    >
+                      <SelectTrigger
+                        id="clinic-select"
+                        className="w-full h-12 text-base"
+                      >
+                        <SelectValue placeholder="Select a clinic" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background">
+                        {clinics.map((clinic) => (
+                          <SelectItem key={clinic.id} value={clinic.id} className="cursor-pointer">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-primary" />
+                              <span className="font-medium">{clinic.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Selected Clinic Details */}
+                  {selectedClinicId && clinics.find(c => c.id === selectedClinicId) && (
+                    <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                      <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                        Clinic Details
+                      </h4>
+                      <div className="space-y-2">
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                          <div className="text-sm">
+                            <p className="font-medium">
+                              {clinics.find(c => c.id === selectedClinicId)?.address}
+                            </p>
+                            <p className="text-muted-foreground">
+                              {clinics.find(c => c.id === selectedClinicId)?.city},{" "}
+                              {clinics.find(c => c.id === selectedClinicId)?.country}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <p className="text-sm font-medium">
+                            {clinics.find(c => c.id === selectedClinicId)?.phone}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Quick Settings Card */}
             <Card className="shadow-soft">
               <CardHeader>
@@ -384,6 +537,43 @@ const ScheduleSettings = () => {
               </CardContent>
             </Card>
 
+            {/* Blocked Time Section */}
+            <Card className="shadow-soft border-orange-200">
+              <CardHeader className="bg-gradient-to-r from-orange-50 to-transparent">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Ban className="h-5 w-5 text-orange-600" />
+                      Blocked Time Slots
+                    </CardTitle>
+                    <CardDescription>
+                      Block time when you're unavailable for appointments
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={() => setBlockDialogOpen(true)}
+                    className="gradient-hero text-white shadow-soft hover:shadow-hover transition-smooth"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Block Time
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {loadingBlocked ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
+                    <p className="text-muted-foreground">Loading blocked time slots...</p>
+                  </div>
+                ) : (
+                  <BlockedTimeList
+                    blockedSlots={blockedSlots}
+                    onDelete={handleDeleteBlockedTime}
+                  />
+                )}
+              </CardContent>
+            </Card>
+
             {/* Action Buttons */}
             <div className="flex justify-end gap-3 pt-2">
               <Button
@@ -416,6 +606,14 @@ const ScheduleSettings = () => {
       </main>
 
       <Footer />
+
+      {/* Block Time Dialog */}
+      <BlockTimeDialog
+        open={blockDialogOpen}
+        onOpenChange={setBlockDialogOpen}
+        onSave={handleCreateBlockedTime}
+        clinicId={selectedClinicId}
+      />
     </div>
   );
 };
