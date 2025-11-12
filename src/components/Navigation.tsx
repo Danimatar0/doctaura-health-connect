@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, LogIn, UserCircle, Menu } from "lucide-react";
+import { Search, MapPin, LogIn, UserCircle, Menu, Settings } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { keycloakService } from "@/services/keycloakService";
 import { useState, useEffect } from "react";
@@ -120,6 +120,12 @@ const Navigation = () => {
                       <DropdownMenuItem onClick={() => handleNavigate(`/${userRole}/profile`)}>
                         Profile
                       </DropdownMenuItem>
+                      {userRole === 'doctor' && (
+                        <DropdownMenuItem onClick={() => handleNavigate('/schedule-settings')}>
+                          <Settings className="h-4 w-4 mr-2" />
+                          Schedule Settings
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onClick={() => handleNavigate(`/${userRole}/settings`)}>
                         Settings
                       </DropdownMenuItem>
@@ -181,6 +187,16 @@ const Navigation = () => {
                         >
                           Profile
                         </Button>
+                        {userRole === 'doctor' && (
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start gap-2"
+                            onClick={() => handleNavigate('/schedule-settings')}
+                          >
+                            <Settings className="h-4 w-4" />
+                            Schedule Settings
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           className="w-full justify-start"

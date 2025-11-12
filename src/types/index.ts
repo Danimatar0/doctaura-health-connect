@@ -129,3 +129,28 @@ export interface WeeklySchedule {
   day: string;
   appointmentCount: number;
 }
+
+// Schedule Settings types
+export interface DaySchedule {
+  startTime: string;
+  endTime: string;
+  isAvailable: boolean;
+}
+
+export interface ScheduleSettings {
+  id: string;
+  doctorId: string;
+  weeklySchedule: {
+    monday: DaySchedule;
+    tuesday: DaySchedule;
+    wednesday: DaySchedule;
+    thursday: DaySchedule;
+    friday: DaySchedule;
+    saturday: DaySchedule;
+    sunday: DaySchedule;
+  };
+  appointmentDuration: number; // in minutes (15, 30, 45, 60)
+  bufferTime: number; // in minutes
+  maxPatientsPerDay: number;
+  lastUpdated: string;
+}

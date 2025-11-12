@@ -60,12 +60,13 @@ const doctorMenuSections: MenuSection[] = [
       { label: "My Schedule", icon: Clock, path: "/doctor/schedule" },
       { label: "Patient Records", icon: Users, path: "/doctor/patients" },
     ],
+    divider: true,
   },
   {
     items: [
       { label: "My Profile", icon: User, path: "/doctor/profile" },
+      { label: "Schedule Settings", icon: Settings, path: "/schedule-settings" },
       { label: "Preferences", icon: Sliders, path: "/doctor/preferences" },
-      { label: "Settings", icon: Settings, path: "/doctor/settings" },
     ],
     divider: true,
   },

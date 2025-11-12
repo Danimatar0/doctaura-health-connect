@@ -19,6 +19,7 @@ import MedicalRecords from "./pages/MedicalRecords";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import PatientProfile from "./pages/PatientProfile";
 import DoctorProfilePage from "./pages/DoctorProfilePage";
+import ScheduleSettings from "./pages/ScheduleSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -190,6 +191,7 @@ const App = () => (
               </ProtectedRoute>
             }
           />
+          <Route path="/schedule-settings" element={<ScheduleSettings />} />
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
