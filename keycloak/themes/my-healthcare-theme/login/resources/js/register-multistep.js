@@ -1,28 +1,31 @@
 // Multi-step Registration Form Handler
-(function () {
-  "use strict";
+import { MOCK_COUNTRIES } from './mock_countries.js';
+import { MOCK_SPECIALTIES } from './mock_specialties.js';
+import { MOCK_GOVERNORATES } from './mock_governorates.js';
+import { MOCK_DISTRICTS } from './mock_districts.js';
+import { MOCK_LOCALITIES } from './mock_localities.js';
 
-  let currentStep = 1;
-  const totalSteps = 3;
+let currentStep = 1;
+const totalSteps = 3;
 
-  // Configuration - Load from config.js (window.DoctauraConfig)
-  const API_BASE_URL = window.DoctauraConfig?.apiBaseUrl || "https://your-dotnet-api.onrender.com/api/public";
-  const USE_MOCK_DATA = window.DoctauraConfig?.features?.useMockData || false;
-  const ENABLE_DEBUG = window.DoctauraConfig?.features?.enableDebugLogs || false;
+// Configuration - Load from config.js (window.DoctauraConfig)
+const API_BASE_URL = window.DoctauraConfig?.apiBaseUrl || "https://your-dotnet-api.onrender.com/api/public";
+const USE_MOCK_DATA = window.DoctauraConfig?.features?.useMockData || false;
+const ENABLE_DEBUG = window.DoctauraConfig?.features?.enableDebugLogs || false;
 
-  // Helper function for logging
-  function debugLog(message, data) {
-    if (ENABLE_DEBUG) {
-      if (data) {
-        console.log(`[Doctaura Registration] ${message}`, data);
-      } else {
-        console.log(`[Doctaura Registration] ${message}`);
-      }
+// Helper function for logging
+function debugLog(message, data) {
+  if (ENABLE_DEBUG) {
+    if (data) {
+      console.log(`[Doctaura Registration] ${message}`, data);
+    } else {
+      console.log(`[Doctaura Registration] ${message}`);
     }
   }
+}
 
-  // Input validation and sanitization
-  function sanitizeDropdownValue(value) {
+// Input validation and sanitization
+function sanitizeDropdownValue(value) {
     // Remove any non-numeric characters except empty string
     if (!value || value === "") return "";
     const sanitized = value.toString().replace(/[^0-9]/g, "");
@@ -68,45 +71,55 @@
     return true;
   }
 
-  // Security check - validate legitimate client access
-  function validateClientAccess() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const clientId = urlParams.get("client_id");
-    const codeChallenge = urlParams.get("code_challenge");
-    const kcRole = urlParams.get("kc_role");
-    const ALLOWED_CLIENTS = ["doctaura-app"];
-    const isAllowedClient = ALLOWED_CLIENTS.includes(clientId);
+// Security check - validate legitimate client access
+function validateClientAccess() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const clientId = urlParams.get("client_id");
+  const codeChallenge = urlParams.get("code_challenge");
+  const kcRole = urlParams.get("kc_role");
+  const ALLOWED_CLIENTS = ["doctaura-app"];
+  const isAllowedClient = ALLOWED_CLIENTS.includes(clientId);
 
-    // Check if this is a legitimate client application request
-    // Must have client_id, code_challenge (PKCE), and kc_role
-    const isLegitimateClientRequest = clientId && codeChallenge && kcRole && isAllowedClient;
+  // Log all parameters for debugging
+  console.log("[Doctaura Registration] Validating client access:", {
+    clientId,
+    hasCodeChallenge: !!codeChallenge,
+    kcRole,
+    isAllowedClient,
+    allParams: Object.fromEntries(urlParams)
+  });
 
-    if (!isLegitimateClientRequest) {
-      // Hide registration form
-      const registrationContainer = document.getElementById(
-        "registration-form-container"
-      );
-      if (registrationContainer) {
-        registrationContainer.style.display = "none";
-      }
+  // Check if this is a legitimate client application request
+  // Must have client_id and kc_role (code_challenge only present during OAuth flow)
+  const isLegitimateClientRequest = clientId && kcRole && isAllowedClient;
 
-      // Show unauthorized access message
-      const unauthorizedContainer = document.getElementById(
-        "unauthorized-access"
-      );
-      if (unauthorizedContainer) {
-        unauthorizedContainer.style.display = "block";
-      }
-
-      console.error(
-        "Unauthorized registration attempt detected - missing required PKCE parameters"
-      );
-      return false;
+  if (!isLegitimateClientRequest) {
+    // Hide registration form
+    const registrationContainer = document.getElementById(
+      "registration-form-container"
+    );
+    if (registrationContainer) {
+      registrationContainer.style.display = "none";
     }
 
-    console.log("Legitimate client request validated - registration enabled");
-    return true;
+    // Show unauthorized access message
+    const unauthorizedContainer = document.getElementById(
+      "unauthorized-access"
+    );
+    if (unauthorizedContainer) {
+      unauthorizedContainer.style.display = "block";
+    }
+
+    console.error(
+      "[Doctaura Registration] Unauthorized registration attempt - missing required parameters:",
+      { clientId, kcRole, isAllowedClient }
+    );
+    return false;
   }
+
+  console.log("[Doctaura Registration] Legitimate client request validated - registration enabled");
+  return true;
+}
 
   async function loadCountries() {
     const countrySelect = document.querySelector(
@@ -141,22 +154,15 @@
     } catch (error) {
       console.error("Error loading countries from API, using mock data:", error);
 
-      // Use mock data as fallback
-      try {
-        const mockResponse = await fetch("../resources/mock_data/mock_countries.json");
-        const countries = await mockResponse.json();
-
-        countrySelect.innerHTML = '<option value="">Select Country</option>';
-        countries.forEach((country) => {
-          const option = document.createElement("option");
-          option.value = country.id;
-          option.textContent = country.name;
-          countrySelect.appendChild(option);
-        });
-      } catch (mockError) {
-        console.error("Error loading mock countries:", mockError);
-        countrySelect.innerHTML = '<option value="">Error loading countries</option>';
-      }
+      // Use inline mock data as fallback
+      countrySelect.innerHTML = '<option value="">Select Country</option>';
+      MOCK_COUNTRIES.forEach((country) => {
+        const option = document.createElement("option");
+        option.value = country.id;
+        option.textContent = country.name;
+        countrySelect.appendChild(option);
+      });
+      debugLog("Loaded countries from inline mock data", MOCK_COUNTRIES);
     }
   }
 
@@ -191,22 +197,15 @@
     } catch (error) {
       console.error("Error loading specialties from API, using mock data:", error);
 
-      // Use mock data as fallback
-      try {
-        const mockResponse = await fetch("../resources/mock_data/mock_specialties.json");
-        const specialties = await mockResponse.json();
-
-        specialtySelect.innerHTML = '<option value="">Select Specialty</option>';
-        specialties.forEach((specialty) => {
-          const option = document.createElement("option");
-          option.value = specialty.id;
-          option.textContent = specialty.name;
-          specialtySelect.appendChild(option);
-        });
-      } catch (mockError) {
-        console.error("Error loading mock specialties:", mockError);
-        specialtySelect.innerHTML = '<option value="">Error loading specialties</option>';
-      }
+      // Use inline mock data as fallback
+      specialtySelect.innerHTML = '<option value="">Select Specialty</option>';
+      MOCK_SPECIALTIES.forEach((specialty) => {
+        const option = document.createElement("option");
+        option.value = specialty.id;
+        option.textContent = specialty.name;
+        specialtySelect.appendChild(option);
+      });
+      debugLog("Loaded specialties from inline mock data", MOCK_SPECIALTIES);
     }
   }
 
@@ -242,22 +241,15 @@
     } catch (error) {
       console.error("Error loading governorates from API, using mock data:", error);
 
-      // Use mock data as fallback
-      try {
-        const mockResponse = await fetch("../resources/mock_data/mock_governorates.json");
-        const governorates = await mockResponse.json();
-
-        governorateSelect.innerHTML = '<option value="">Select Governorate</option>';
-        governorates.forEach((governorate) => {
-          const option = document.createElement("option");
-          option.value = governorate.id;
-          option.textContent = governorate.name;
-          governorateSelect.appendChild(option);
-        });
-      } catch (mockError) {
-        console.error("Error loading mock governorates:", mockError);
-        governorateSelect.innerHTML = '<option value="">Error loading governorates</option>';
-      }
+      // Use inline mock data as fallback
+      governorateSelect.innerHTML = '<option value="">Select Governorate</option>';
+      MOCK_GOVERNORATES.forEach((governorate) => {
+        const option = document.createElement("option");
+        option.value = governorate.id;
+        option.textContent = governorate.name;
+        governorateSelect.appendChild(option);
+      });
+      debugLog("Loaded governorates from inline mock data", MOCK_GOVERNORATES);
     }
   }
 
@@ -311,33 +303,26 @@
     } catch (error) {
       console.error("Error loading districts from API, using mock data:", error);
 
-      // Use mock data as fallback
-      try {
-        const mockResponse = await fetch("../resources/mock_data/mock_districts.json");
-        const allDistricts = await mockResponse.json();
+      // Use inline mock data as fallback
+      // Filter districts by parentId (governorateId)
+      const districts = MOCK_DISTRICTS.filter(
+        (district) => district.parentId === parseInt(governorateId, 10)
+      );
 
-        // Filter districts by parentId (governorateId)
-        const districts = allDistricts.filter(
-          (district) => district.parentId === parseInt(governorateId, 10)
-        );
+      districtSelect.innerHTML = '<option value="">Select District</option>';
 
-        districtSelect.innerHTML = '<option value="">Select District</option>';
-
-        if (districts.length === 0) {
-          districtSelect.innerHTML = '<option value="">No districts available</option>';
-        } else {
-          districts.forEach((district) => {
-            const option = document.createElement("option");
-            option.value = district.id;
-            option.textContent = district.name;
-            districtSelect.appendChild(option);
-          });
-          districtSelect.disabled = false;
-        }
-      } catch (mockError) {
-        console.error("Error loading mock districts:", mockError);
-        districtSelect.innerHTML = '<option value="">Error loading districts</option>';
+      if (districts.length === 0) {
+        districtSelect.innerHTML = '<option value="">No districts available</option>';
+      } else {
+        districts.forEach((district) => {
+          const option = document.createElement("option");
+          option.value = district.id;
+          option.textContent = district.name;
+          districtSelect.appendChild(option);
+        });
+        districtSelect.disabled = false;
       }
+      debugLog("Loaded districts from inline mock data", districts);
     }
   }
 
@@ -387,33 +372,26 @@
     } catch (error) {
       console.error("Error loading localities from API, using mock data:", error);
 
-      // Use mock data as fallback
-      try {
-        const mockResponse = await fetch("../resources/mock_data/mock_localities.json");
-        const allLocalities = await mockResponse.json();
+      // Use inline mock data as fallback
+      // Filter localities by parentId (districtId)
+      const localities = MOCK_LOCALITIES.filter(
+        (locality) => locality.parentId === parseInt(districtId, 10)
+      );
 
-        // Filter localities by parentId (districtId)
-        const localities = allLocalities.filter(
-          (locality) => locality.parentId === parseInt(districtId, 10)
-        );
+      localitySelect.innerHTML = '<option value="">Select Locality</option>';
 
-        localitySelect.innerHTML = '<option value="">Select Locality</option>';
-
-        if (localities.length === 0) {
-          localitySelect.innerHTML = '<option value="">No localities available</option>';
-        } else {
-          localities.forEach((locality) => {
-            const option = document.createElement("option");
-            option.value = locality.id;
-            option.textContent = locality.name;
-            localitySelect.appendChild(option);
-          });
-          localitySelect.disabled = false;
-        }
-      } catch (mockError) {
-        console.error("Error loading mock localities:", mockError);
-        localitySelect.innerHTML = '<option value="">Error loading localities</option>';
+      if (localities.length === 0) {
+        localitySelect.innerHTML = '<option value="">No localities available</option>';
+      } else {
+        localities.forEach((locality) => {
+          const option = document.createElement("option");
+          option.value = locality.id;
+          option.textContent = locality.name;
+          localitySelect.appendChild(option);
+        });
+        localitySelect.disabled = false;
       }
+      debugLog("Loaded localities from inline mock data", localities);
     }
   }
 
@@ -826,10 +804,9 @@
     showStep(1); // Then show first step
   }
 
-  // Initialize
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
-})();
+// Initialize
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
+} else {
+  init();
+}

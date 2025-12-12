@@ -1,0 +1,26 @@
+// Mock Specialties Data
+export const MOCK_SPECIALTIES = [
+  { id: 1, name: "General Practice" },
+  { id: 2, name: "Internal Medicine" },
+  { id: 3, name: "Pediatrics" },
+  { id: 4, name: "Cardiology" },
+  { id: 5, name: "Dermatology" },
+  { id: 6, name: "Orthopedics" },
+  { id: 7, name: "Neurology" },
+  { id: 8, name: "Psychiatry" },
+  { id: 9, name: "Obstetrics & Gynecology" },
+  { id: 10, name: "Ophthalmology" },
+  { id: 11, name: "Otolaryngology (ENT)" },
+  { id: 12, name: "Urology" },
+  { id: 13, name: "Gastroenterology" },
+  { id: 14, name: "Endocrinology" },
+  { id: 15, name: "Pulmonology" },
+  { id: 16, name: "Nephrology" },
+  { id: 17, name: "Rheumatology" },
+  { id: 18, name: "Oncology" },
+  { id: 19, name: "Radiology" },
+  { id: 20, name: "Anesthesiology" },
+  { id: 21, name: "Emergency Medicine" },
+  { id: 22, name: "Plastic Surgery" },
+  { id: 23, name: "General Surgery" }
+];
