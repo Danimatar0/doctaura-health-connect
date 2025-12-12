@@ -12,17 +12,83 @@
 
 import { env } from "@/config/env";
 import { Appointment, Prescription, Patient } from "@/types";
+import { AuthUser } from "@/types/auth.types";
 import { mockAppointments } from "@/data/mockAppointments";
 import { mockPrescriptions } from "@/data/mockPrescriptions";
 import { getMockPatientProfile, mockDashboardStats } from "@/data/mockPatientProfile";
 
 // API endpoints
 const API_ENDPOINTS = {
-  appointments: `${env.api.baseUrl}/api/patient/appointments`,
-  prescriptions: `${env.api.baseUrl}/api/patient/prescriptions`,
-  profile: `${env.api.baseUrl}/api/patient/profile`,
-  stats: `${env.api.baseUrl}/api/patient/stats`,
+  appointments: `${env.api.baseUrl}/api/patients/appointments`,
+  prescriptions: `${env.api.baseUrl}/api/patients/prescriptions`,
+  profile: `${env.api.baseUrl}/api/patients/profile`,
+  stats: `${env.api.baseUrl}/api/patients/stats`,
+  registration: `${env.api.baseUrl}/api/patients`
 };
+
+// Types for patient registration
+export interface PatientRegistrationRequest {
+  firstname: string;
+  lastname: string;
+  phone?: string;
+  gender: number; // 0 = male, 1 = female, 2 = other
+  dateOfBirth: string; // Format: "YYYY-MM-DD"
+  email: string;
+  governorateId?: number | null; // Optional: User's governorate ID
+  districtId?: number | null; // Optional: User's district ID
+  localityId?: number | null; // Optional: User's locality ID
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  bloodType?: string;
+  allergies?: string;
+  chronicConditions?: string;
+  preferredLanguage: string; // e.g., "en", "ar", "fr"
+}
+
+export interface PatientRegistrationResponse {
+  id: string;
+  message: string;
+}
+
+/**
+ * Helper function to convert AuthUser (from Keycloak) to PatientRegistrationRequest
+ * Maps Keycloak user attributes to the backend API format
+ */
+export function convertAuthUserToPatientRequest(user: AuthUser): PatientRegistrationRequest {
+  // Convert gender string to number (0 = male, 1 = female, 2 = other)
+  const genderMap: Record<string, number> = {
+    'male': 0,
+    'female': 1,
+    'other': 2,
+  };
+  const gender = user.gender ? genderMap[user.gender.toLowerCase()] ?? 2 : 2;
+
+  // Extract preferred language from locale or default to 'en'
+  const preferredLanguage = user.locale?.split('-')[0] || 'en';
+
+  // Convert location IDs to numbers (they come as strings from Keycloak)
+  const governorateId = user.governorateId ? parseInt(user.governorateId, 10) : null;
+  const districtId = user.districtId ? parseInt(user.districtId, 10) : null;
+  const localityId = user.localityId ? parseInt(user.localityId, 10) : null;
+
+  return {
+    firstname: user.firstName || user.name.split(' ')[0] || '',
+    lastname: user.lastName || user.name.split(' ').slice(1).join(' ') || '',
+    phone: user.phone || '',
+    gender,
+    dateOfBirth: user.dateOfBirth || '',
+    email: user.email,
+    governorateId: isNaN(governorateId as number) ? null : governorateId,
+    districtId: isNaN(districtId as number) ? null : districtId,
+    localityId: isNaN(localityId as number) ? null : localityId,
+    emergencyContactName: '', // Not currently collected in Keycloak form - can be added later
+    emergencyContactPhone: '', // Not currently collected in Keycloak form - can be added later
+    bloodType: user.bloodType || '',
+    allergies: '', // Not currently collected in Keycloak form - can be added later
+    chronicConditions: '', // Not currently collected in Keycloak form - can be added later
+    preferredLanguage,
+  };
+}
 
 // Mock data functions (synchronous for simplicity, but wrapped in Promises)
 const getMockAppointments = async (): Promise<Appointment[]> => {
@@ -107,6 +173,34 @@ const getApiDashboardStats = async (): Promise<{ recordsCount: number; doctorsCo
   return response.json();
 };
 
+/**
+ * Register a new patient in the backend system
+ * This should be called after successful Keycloak registration
+ */
+const registerPatient = async (
+  data: PatientRegistrationRequest,
+  token: string
+): Promise<PatientRegistrationResponse> => {
+  const response = await fetch(API_ENDPOINTS.registration, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(
+      errorData?.message || `Failed to register patient: ${response.statusText}`
+    );
+  }
+
+  return response.json();
+};
+
+
 // Public API - automatically switches between mock and real API based on env flag
 export const patientDataService = {
   /**
@@ -171,6 +265,18 @@ export const patientDataService = {
   getPrescriptionById: async (id: string): Promise<Prescription | undefined> => {
     const prescriptions = await patientDataService.getPrescriptions();
     return prescriptions.find(rx => rx.id === id);
+  },
+
+  /**
+   * Register a new patient after Keycloak registration
+   * This creates the patient record in the backend system
+   */
+  registerPatient: async (
+    data: PatientRegistrationRequest,
+    token: string
+  ): Promise<PatientRegistrationResponse> => {
+    // Always call the real API for registration (no mock)
+    return registerPatient(data, token);
   },
 };
 

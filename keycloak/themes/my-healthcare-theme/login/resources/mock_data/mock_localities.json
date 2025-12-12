@@ -1,0 +1,107 @@
+[
+    {
+        "id": 10101,
+        "name": "Achrafieh",
+        "type": "Neighborhood",
+        "parentId": 101,
+        "parentName": "Beirut"
+    },
+    {
+        "id": 10114,
+        "name": "Ain el-Mreisseh",
+        "type": "Neighborhood",
+        "parentId": 101,
+        "parentName": "Beirut"
+    },
+    {
+        "id": 10111,
+        "name": "Bachoura",
+        "type": "Neighborhood",
+        "parentId": 101,
+        "parentName": "Beirut"
+    },
+    {
+        "id": 10107,
+        "name": "Badaro",
+        "type": "Neighborhood",
+        "parentId": 101,
+        "parentName": "Beirut"
+    },
+    {
+        "id": 10113,
+        "name": "Downtown Beirut",
+        "type": "Neighborhood",
+        "parentId": 101,
+        "parentName": "Beirut"
+    },
+    {
+        "id": 10106,
+        "name": "Gemmayze",
+        "type": "Neighborhood",
+        "parentId": 101,
+        "parentName": "Beirut"
+    },
+    {
+        "id": 10102,
+        "name": "Hamra",
+        "type": "Neighborhood",
+        "parentId": 101,
+        "parentName": "Beirut"
+    },
+    {
+        "id": 10105,
+        "name": "Mar Mikhael",
+        "type": "Neighborhood",
+        "parentId": 101,
+        "parentName": "Beirut"
+    },
+    {
+        "id": 10108,
+        "name": "Mazraa",
+        "type": "Neighborhood",
+        "parentId": 101,
+        "parentName": "Beirut"
+    },
+    {
+        "id": 10115,
+        "name": "Minet el-Hosn",
+        "type": "Neighborhood",
+        "parentId": 101,
+        "parentName": "Beirut"
+    },
+    {
+        "id": 10109,
+        "name": "Msaytbeh",
+        "type": "Neighborhood",
+        "parentId": 101,
+        "parentName": "Beirut"
+    },
+    {
+        "id": 10104,
+        "name": "Ras Beirut",
+        "type": "Neighborhood",
+        "parentId": 101,
+        "parentName": "Beirut"
+    },
+    {
+        "id": 10112,
+        "name": "Saifi",
+        "type": "Neighborhood",
+        "parentId": 101,
+        "parentName": "Beirut"
+    },
+    {
+        "id": 10103,
+        "name": "Verdun",
+        "type": "Neighborhood",
+        "parentId": 101,
+        "parentName": "Beirut"
+    },
+    {
+        "id": 10110,
+        "name": "Zuqaq al-Blat",
+        "type": "Neighborhood",
+        "parentId": 101,
+        "parentName": "Beirut"
+    }
+]

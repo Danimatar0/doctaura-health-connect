@@ -85,7 +85,7 @@ class KeycloakService implements IAuthService {
 
     // For "webapp" strategy, role is required
     // For "keycloak" strategy, role can be undefined (Keycloak will handle it)
-    const state = this.generateState(role || "patient"); // Default to patient if not provided
+    const state = this.generateState(role || "patient", undefined, true); // Mark as new registration
     this.saveState(state);
 
     // Generate PKCE parameters
@@ -151,7 +151,7 @@ class KeycloakService implements IAuthService {
       }
 
       const tokens: TokenResponse = await response.json();
-      const user = await this.createAuthUser(tokens, credentials.role);
+      const user = await this.createAuthUserFromTokens(tokens, credentials.role);
 
       this.saveUser(user);
       return user;
@@ -222,7 +222,7 @@ class KeycloakService implements IAuthService {
 
       const tokens: TokenResponse = await response.json();
       const role = savedState?.role || "patient";
-      const user = await this.createAuthUser(tokens, role);
+      const user = await this.createAuthUserFromTokens(tokens, role);
 
       this.saveUser(user);
       this.clearState();
@@ -303,7 +303,7 @@ class KeycloakService implements IAuthService {
       }
 
       const tokens: TokenResponse = await response.json();
-      const updatedUser = await this.createAuthUser(tokens, user.role);
+      const updatedUser = await this.createAuthUserFromTokens(tokens, user.role);
 
       this.saveUser(updatedUser);
       return updatedUser;
@@ -468,6 +468,17 @@ class KeycloakService implements IAuthService {
       if (data.bloodType !== undefined) {
         attributes.bloodType = [data.bloodType];
       }
+      // Location fields
+      if (data.governorateId !== undefined) {
+        attributes.governorateId = [data.governorateId];
+      }
+      if (data.districtId !== undefined) {
+        attributes.districtId = [data.districtId];
+      }
+      if (data.localityId !== undefined) {
+        attributes.localityId = [data.localityId];
+      }
+      // Doctor-specific fields
       if (data.specialty !== undefined) {
         attributes.specialty = [data.specialty];
       }
@@ -524,6 +535,11 @@ class KeycloakService implements IAuthService {
         country: extractAttribute("country") || data.country,
         locale: extractAttribute("locale") || data.locale,
         bloodType: extractAttribute("bloodType") || data.bloodType,
+        // Location fields
+        governorateId: extractAttribute("governorateId") || data.governorateId,
+        districtId: extractAttribute("districtId") || data.districtId,
+        localityId: extractAttribute("localityId") || data.localityId,
+        // Doctor-specific fields
         specialty: extractAttribute("specialty") || data.specialty,
         medicalCertification: extractAttribute("medicalCertification") || data.medicalCertification,
         roleAssignedAt: extractAttribute("role_assigned_at"),
@@ -542,7 +558,7 @@ class KeycloakService implements IAuthService {
    * Get current authenticated user
    */
   getCurrentUser(): AuthUser | null {
-    const userStr = localStorage.getItem(AuthStorageKeys.USER);
+    const userStr = sessionStorage.getItem(AuthStorageKeys.USER);
     if (!userStr) return null;
 
     try {
@@ -632,10 +648,17 @@ class KeycloakService implements IAuthService {
   }
 
   /**
+   * Get current OAuth state (useful for checking registration status)
+   */
+  getOAuthState(): OAuthState | null {
+    return this.getState();
+  }
+
+  /**
    * Clear session data
    */
   clearSession(): void {
-    localStorage.removeItem(AuthStorageKeys.USER);
+    sessionStorage.removeItem(AuthStorageKeys.USER);
     sessionStorage.removeItem(AuthStorageKeys.ROLE);
     sessionStorage.removeItem(AuthStorageKeys.STATE);
     sessionStorage.removeItem(AuthStorageKeys.REDIRECT);
@@ -647,7 +670,7 @@ class KeycloakService implements IAuthService {
   /**
    * Create AuthUser from token response
    */
-  private async createAuthUser(tokens: TokenResponse, role: UserRole): Promise<AuthUser> {
+  private async createAuthUserFromTokens(tokens: TokenResponse, role: UserRole): Promise<AuthUser> {
     // Get user info from Keycloak
     const userInfoResponse = await fetch(this.endpoints.userInfo, {
       headers: {
@@ -694,6 +717,10 @@ class KeycloakService implements IAuthService {
       country: extractAttribute("country"),
       locale: extractAttribute("locale"),
       bloodType: extractAttribute("bloodType"),
+      // Location fields
+      governorateId: extractAttribute("governorateId"),
+      districtId: extractAttribute("districtId"),
+      localityId: extractAttribute("localityId"),
       // Doctor-specific fields
       specialty: extractAttribute("specialty"),
       medicalCertification: extractAttribute("medicalCertification"),
@@ -743,12 +770,13 @@ class KeycloakService implements IAuthService {
   /**
    * Generate OAuth state
    */
-  private generateState(role: UserRole, redirectUrl?: string): OAuthState {
+  private generateState(role: UserRole, redirectUrl?: string, isNewRegistration?: boolean): OAuthState {
     return {
       role,
       redirectUrl,
       timestamp: Date.now(),
       nonce: this.generateNonce(),
+      isNewRegistration,
     };
   }
 
@@ -823,7 +851,7 @@ class KeycloakService implements IAuthService {
    * Save user to storage
    */
   private saveUser(user: AuthUser): void {
-    localStorage.setItem(AuthStorageKeys.USER, JSON.stringify(user));
+    sessionStorage.setItem(AuthStorageKeys.USER, JSON.stringify(user));
   }
 
   /**

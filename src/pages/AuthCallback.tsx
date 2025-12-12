@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { keycloakService } from "@/services/keycloakService";
+import { patientDataService, convertAuthUserToPatientRequest } from "@/services/patientDataService";
 import { useToast } from "@/hooks/use-toast";
 import { Heart, Loader2 } from "lucide-react";
 import { AuthError } from "@/types/auth.types";
@@ -46,10 +47,35 @@ const AuthCallback = () => {
         // Exchange code for tokens
         const user = await keycloakService.handleCallback(code, state || undefined);
 
+        // Check if this is a new patient registration
+        const oauthState = keycloakService.getOAuthState();
+        const isNewRegistration = oauthState?.isNewRegistration === true;
+        const isPatient = user.role === "patient";
+
+        // If this is a new patient registration, create patient record in backend
+        if (isNewRegistration && isPatient) {
+          try {
+            const patientData = convertAuthUserToPatientRequest(user);
+            await patientDataService.registerPatient(patientData, user.accessToken);
+            console.log("Patient record created successfully in backend");
+          } catch (regError) {
+            // Log the error but don't fail the authentication
+            // The user is already authenticated in Keycloak
+            console.error("Failed to create patient record in backend:", regError);
+
+            // Show a non-blocking warning to the user
+            toast({
+              title: "Profile Setup Incomplete",
+              description: "Your account was created but profile data needs to be completed. Please update your profile.",
+              variant: "default",
+            });
+          }
+        }
+
         setStatus("success");
         toast({
-          title: "Welcome back!",
-          description: `Successfully logged in as ${user.name}`,
+          title: isNewRegistration ? "Welcome to Doctaura!" : "Welcome back!",
+          description: `Successfully ${isNewRegistration ? "registered" : "logged in"} as ${user.name}`,
         });
 
         // Redirect to appropriate dashboard

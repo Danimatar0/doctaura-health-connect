@@ -19,11 +19,14 @@ const Register = () => {
     if (registrationStrategy === "webapp") {
       // Pass the selected role to Keycloak
       keycloakService.redirectToRegister(selectedRole);
+      /// TODO: Handle local registration here
     } else {
       // Scenario 2: Keycloak theme handles role selection
       // Don't pass role, let Keycloak theme handle it
       keycloakService.redirectToRegister();
     }
+
+
   };
 
   // For Keycloak strategy - single register button
@@ -67,67 +70,67 @@ const Register = () => {
             {registrationStrategy === "webapp" && (
               <div className="mb-8">
                 <h2 className="text-center text-lg font-medium mb-6">Choose your account type</h2>
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Patient Card */}
-                <Card
-                  className="cursor-pointer transition-all hover:shadow-hover hover:ring-2 hover:ring-primary shadow-soft"
-                  onClick={() => handleRoleCardClick("patient")}
-                >
-                  <CardHeader>
-                    <div className="flex flex-col items-center text-center space-y-3">
-                      <div className="w-16 h-16 rounded-full flex items-center justify-center bg-primary text-white">
-                        <UserCircle className="h-8 w-8" />
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Patient Card */}
+                  <Card
+                    className="cursor-pointer transition-all hover:shadow-hover hover:ring-2 hover:ring-primary shadow-soft"
+                    onClick={() => handleRoleCardClick("patient")}
+                  >
+                    <CardHeader>
+                      <div className="flex flex-col items-center text-center space-y-3">
+                        <div className="w-16 h-16 rounded-full flex items-center justify-center bg-primary text-white">
+                          <UserCircle className="h-8 w-8" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-xl">Patient Account</CardTitle>
+                          <CardDescription className="mt-2">
+                            For individuals seeking healthcare services
+                          </CardDescription>
+                        </div>
                       </div>
-                      <div>
-                        <CardTitle className="text-xl">Patient Account</CardTitle>
-                        <CardDescription className="mt-2">
-                          For individuals seeking healthcare services
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2">
-                      {patientBenefits.map((benefit, index) => (
-                        <li key={index} className="flex items-start gap-2 text-sm">
-                          <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
-                          <span className="text-muted-foreground">{benefit}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2">
+                        {patientBenefits.map((benefit, index) => (
+                          <li key={index} className="flex items-start gap-2 text-sm">
+                            <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
+                            <span className="text-muted-foreground">{benefit}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
 
-                {/* Doctor Card */}
-                <Card
-                  className="cursor-pointer transition-all hover:shadow-hover hover:ring-2 hover:ring-primary shadow-soft"
-                  onClick={() => handleRoleCardClick("doctor")}
-                >
-                  <CardHeader>
-                    <div className="flex flex-col items-center text-center space-y-3">
-                      <div className="w-16 h-16 rounded-full flex items-center justify-center bg-primary text-white">
-                        <Stethoscope className="h-8 w-8" />
+                  {/* Doctor Card */}
+                  <Card
+                    className="cursor-pointer transition-all hover:shadow-hover hover:ring-2 hover:ring-primary shadow-soft"
+                    onClick={() => handleRoleCardClick("doctor")}
+                  >
+                    <CardHeader>
+                      <div className="flex flex-col items-center text-center space-y-3">
+                        <div className="w-16 h-16 rounded-full flex items-center justify-center bg-primary text-white">
+                          <Stethoscope className="h-8 w-8" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-xl">Doctor Account</CardTitle>
+                          <CardDescription className="mt-2">
+                            For healthcare professionals providing services
+                          </CardDescription>
+                        </div>
                       </div>
-                      <div>
-                        <CardTitle className="text-xl">Doctor Account</CardTitle>
-                        <CardDescription className="mt-2">
-                          For healthcare professionals providing services
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2">
-                      {doctorBenefits.map((benefit, index) => (
-                        <li key={index} className="flex items-start gap-2 text-sm">
-                          <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
-                          <span className="text-muted-foreground">{benefit}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              </div>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2">
+                        {doctorBenefits.map((benefit, index) => (
+                          <li key={index} className="flex items-start gap-2 text-sm">
+                            <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
+                            <span className="text-muted-foreground">{benefit}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             )}
 

@@ -1,0 +1,430 @@
+/* ===== RESET & BASE ===== */
+* {
+    box-sizing: border-box;
+}
+
+html {
+    height: 100%;
+    overflow-y: auto;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+}
+
+/* ===== MAIN LAYOUT - Fix Keycloak Structure ===== */
+body.login-pf {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    padding: 1rem !important;
+    min-height: 100vh !important;
+}
+
+/* Override Keycloak's problematic containers */
+.login-pf-page {
+    display: block !important;
+    height: auto !important;
+    min-height: auto !important;
+    padding: 0 !important;
+}
+
+#kc-header,
+#kc-header-wrapper {
+    display: none !important; /* Hide Keycloak's default header to prevent duplication */
+}
+
+#kc-container,
+#kc-container-wrapper {
+    height: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+}
+
+#kc-content {
+    width: 100% !important;
+    max-width: 600px !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+}
+
+#kc-content-wrapper {
+    width: 100% !important;
+    padding: 0 !important;
+}
+
+#kc-form,
+#kc-form-wrapper {
+    background: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    margin: 0;
+}
+
+/* ===== FORM STYLES ===== */
+.form-step {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== PROGRESS INDICATOR ===== */
+#progress-indicator {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    position: relative;
+}
+
+.step-indicator {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    flex: 1;
+}
+
+.step-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: all 0.3s;
+}
+
+/* ===== INPUTS ===== */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="date"],
+select {
+    width: 100%;
+    border: 2px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+input:focus,
+select:focus {
+    outline: none;
+    border-color: #0891b2;
+    box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1);
+}
+
+/* ===== LABELS ===== */
+label {
+    display: block;
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+/* ===== BUTTONS ===== */
+button {
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+/* ===== LINKS ===== */
+a {
+    color: #0891b2;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* ===== LANGUAGE DROPDOWN ===== */
+#kc-locale {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+}
+
+#kc-locale-dropdown ul {
+    display: none;
+    position: absolute;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin-top: 0.25rem;
+    min-width: 150px;
+    z-index: 1000;
+    list-style: none;
+    padding: 0.5rem 0;
+    right: 0;
+}
+
+#kc-locale-dropdown button[aria-expanded="true"] + ul {
+    display: block;
+}
+
+#kc-current-locale-link {
+    padding: 0.5rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    background: white;
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+
+#kc-locale-dropdown li a {
+    display: block;
+    padding: 0.5rem 1rem;
+    color: #374151;
+}
+
+#kc-locale-dropdown li a:hover {
+    background: #f3f4f6;
+    text-decoration: none;
+}
+
+/* ===== TABLET: 768px and below ===== */
+@media (max-width: 768px) {
+    body.login-pf {
+        padding: 1rem 0.75rem !important;
+    }
+
+    #kc-form,
+    #kc-form-wrapper {
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+    }
+
+    /* Stack two-column grids */
+    div[style*="grid-template-columns: 1fr 1fr"] {
+        display: block !important;
+    }
+
+    div[style*="grid-template-columns: 1fr 1fr"] > div {
+        margin-bottom: 1.25rem !important;
+    }
+
+    div[style*="grid-template-columns: 1fr 1fr"] > div:last-child {
+        margin-bottom: 0 !important;
+    }
+
+    h2 {
+        font-size: 1.5rem !important;
+    }
+
+    h3 {
+        font-size: 1.125rem !important;
+    }
+
+    .step-circle {
+        width: 28px;
+        height: 28px;
+        font-size: 0.8125rem;
+    }
+
+    .step-indicator > div:last-child {
+        font-size: 0.6875rem;
+    }
+}
+
+/* ===== MOBILE: 640px and below ===== */
+@media (max-width: 640px) {
+    body.login-pf {
+        padding: 0.75rem 0.5rem !important;
+    }
+
+    #kc-form,
+    #kc-form-wrapper {
+        padding: 1.25rem;
+        border-radius: 0.5rem;
+    }
+
+    /* Icon */
+    div[style*="border-radius: 50%"][style*="width: 70px"] {
+        width: 55px !important;
+        height: 55px !important;
+    }
+
+    div[style*="border-radius: 50%"][style*="width: 70px"] svg {
+        width: 28px !important;
+        height: 28px !important;
+    }
+
+    h2 {
+        font-size: 1.375rem !important;
+    }
+
+    h3 {
+        font-size: 1rem !important;
+    }
+
+    p {
+        font-size: 0.875rem !important;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="date"],
+    select {
+        padding: 0.625rem 0.875rem;
+        font-size: 0.9375rem;
+    }
+
+    button[type="button"],
+    button[type="submit"] {
+        padding: 0.875rem 1.25rem !important;
+        font-size: 0.9375rem !important;
+    }
+
+    .step-circle {
+        width: 26px;
+        height: 26px;
+        font-size: 0.75rem;
+    }
+
+    .step-indicator > div:last-child {
+        font-size: 0.65rem;
+    }
+
+    /* Stack navigation buttons on small mobile */
+    div[style*="display: flex; gap: 1rem"] {
+        flex-direction: column !important;
+        gap: 0.75rem !important;
+    }
+}
+
+/* ===== SMALL MOBILE: 480px and below ===== */
+@media (max-width: 480px) {
+    body.login-pf {
+        padding: 0.5rem !important;
+    }
+
+    #kc-form,
+    #kc-form-wrapper {
+        padding: 1rem;
+    }
+
+    div[style*="border-radius: 50%"][style*="width: 70px"] {
+        width: 50px !important;
+        height: 50px !important;
+    }
+
+    div[style*="border-radius: 50%"][style*="width: 70px"] svg {
+        width: 24px !important;
+        height: 24px !important;
+    }
+
+    h2 {
+        font-size: 1.25rem !important;
+    }
+
+    h3 {
+        font-size: 0.9375rem !important;
+    }
+
+    div[style*="margin-bottom: 2rem"] {
+        margin-bottom: 1.25rem !important;
+    }
+
+    div[style*="margin-bottom: 1.5rem"] {
+        margin-bottom: 1rem !important;
+    }
+
+    div[style*="margin-bottom: 1.25rem"] {
+        margin-bottom: 1rem !important;
+    }
+
+    /* Hide step labels on very small screens */
+    .step-indicator > div:last-child {
+        font-size: 0.6rem;
+    }
+}
+
+/* ===== LANDSCAPE MOBILE ===== */
+@media (max-height: 700px) and (orientation: landscape) {
+    body.login-pf {
+        padding: 0.75rem 1rem !important;
+    }
+
+    #kc-form,
+    #kc-form-wrapper {
+        padding: 1rem;
+    }
+
+    div[style*="border-radius: 50%"][style*="width: 70px"] {
+        width: 45px !important;
+        height: 45px !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    div[style*="margin-bottom: 2rem"] {
+        margin-bottom: 1rem !important;
+    }
+
+    div[style*="margin-bottom: 1.5rem"] {
+        margin-bottom: 0.75rem !important;
+    }
+
+    div[style*="margin-bottom: 1.25rem"] {
+        margin-bottom: 0.75rem !important;
+    }
+
+    h2 {
+        font-size: 1.25rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+
+    h3 {
+        font-size: 1rem !important;
+    }
+}
+
+/* ===== VERY SMALL SCREENS ===== */
+@media (max-width: 360px) {
+    #kc-form,
+    #kc-form-wrapper {
+        padding: 0.875rem;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="date"],
+    select {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    button[type="button"],
+    button[type="submit"] {
+        padding: 0.75rem 1rem !important;
+        font-size: 0.875rem !important;
+    }
+}

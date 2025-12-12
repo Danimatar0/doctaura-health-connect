@@ -33,6 +33,10 @@ export interface AuthUser {
   country?: string;
   locale?: string;
   bloodType?: string;
+  // Location fields (stored as strings in Keycloak, converted to numbers for API)
+  governorateId?: string;
+  districtId?: string;
+  localityId?: string;
   // Doctor-specific fields
   specialty?: string;
   medicalCertification?: string;
@@ -131,6 +135,10 @@ export interface ProfileUpdateData {
   country?: string;
   locale?: string;
   bloodType?: string;
+  // Location fields
+  governorateId?: string;
+  districtId?: string;
+  localityId?: string;
   // Doctor-specific fields
   specialty?: string;
   medicalCertification?: string;
@@ -247,4 +255,5 @@ export interface OAuthState {
   redirectUrl?: string;
   timestamp: number;
   nonce: string;
+  isNewRegistration?: boolean; // Flag to identify new user registrations
 }
