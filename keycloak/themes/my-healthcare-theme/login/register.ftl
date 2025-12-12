@@ -311,10 +311,10 @@
         </div>
 
         <!-- Include configuration first -->
-        <script src="${url.resourcesPath}/js/config.js?v=2.0.2"></script>
+        <script src="${url.resourcesPath}/js/config.js?v=${.now?long}"></script>
 
         <!-- Include the registration JavaScript as ES6 module -->
-        <script type="module" src="${url.resourcesPath}/js/register-multistep.js?v=2.0.2"></script>
+        <script type="module" src="${url.resourcesPath}/js/register-multistep.js?v=${.now?long}"></script>
 
     </#if>
 </@layout.registrationLayout>

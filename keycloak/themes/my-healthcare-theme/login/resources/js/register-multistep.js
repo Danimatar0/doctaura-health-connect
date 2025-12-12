@@ -1,9 +1,9 @@
 // Multi-step Registration Form Handler
-import { MOCK_COUNTRIES } from './mock_countries.js?v=2.0.2';
-import { MOCK_SPECIALTIES } from './mock_specialties.js?v=2.0.2';
-import { MOCK_GOVERNORATES } from './mock_governorates.js?v=2.0.2';
-import { MOCK_DISTRICTS } from './mock_districts.js?v=2.0.2';
-import { MOCK_LOCALITIES } from './mock_localities.js?v=2.0.2';
+import { MOCK_COUNTRIES } from './mock_countries.js';
+import { MOCK_SPECIALTIES } from './mock_specialties.js';
+import { MOCK_GOVERNORATES } from './mock_governorates.js';
+import { MOCK_DISTRICTS } from './mock_districts.js';
+import { MOCK_LOCALITIES } from './mock_localities.js';
 
 let currentStep = 1;
 const totalSteps = 3;
