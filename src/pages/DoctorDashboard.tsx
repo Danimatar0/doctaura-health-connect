@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Sidebar from "@/components/Sidebar";
 import Footer from "@/components/Footer";
@@ -10,6 +11,8 @@ import { DoctorAppointment, DoctorStats, WeeklySchedule } from "@/types";
 import { doctorDataService } from "@/services/doctorDataService";
 
 const DoctorDashboard = () => {
+  const navigate = useNavigate();
+
   // State for all doctor data
   const [doctorName, setDoctorName] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
@@ -274,7 +277,11 @@ const DoctorDashboard = () => {
                   <Button variant="outline" className="w-full">
                     Patient Records
                   </Button>
-                  <Button variant="outline" className="w-full">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => navigate('/doctor/schedule')}
+                  >
                     Manage Availability
                   </Button>
                 </CardContent>

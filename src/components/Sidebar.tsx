@@ -65,8 +65,8 @@ const doctorMenuSections: MenuSection[] = [
   {
     items: [
       { label: "My Profile", icon: User, path: "/doctor/profile" },
-      { label: "Schedule Settings", icon: Settings, path: "/schedule-settings" },
       { label: "Preferences", icon: Sliders, path: "/doctor/preferences" },
+      { label: "Settings", icon: Settings, path: "/doctor/settings" },
     ],
     divider: true,
   },

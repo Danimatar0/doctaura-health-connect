@@ -167,7 +167,7 @@ const App = () => (
             path="/doctor/schedule"
             element={
               <ProtectedRoute allowedRoles={["doctor"]}>
-                <NotFound />
+                <ScheduleSettings />
               </ProtectedRoute>
             }
           />
@@ -203,8 +203,6 @@ const App = () => (
               </ProtectedRoute>
             }
           />
-          <Route path="/schedule-settings" element={<ScheduleSettings />} />
-
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
