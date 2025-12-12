@@ -1,9 +1,9 @@
 // Multi-step Registration Form Handler
-import { MOCK_COUNTRIES } from './mock_countries.js';
-import { MOCK_SPECIALTIES } from './mock_specialties.js';
-import { MOCK_GOVERNORATES } from './mock_governorates.js';
-import { MOCK_DISTRICTS } from './mock_districts.js';
-import { MOCK_LOCALITIES } from './mock_localities.js';
+import { MOCK_COUNTRIES } from './mock_countries.js?v=2.0.2';
+import { MOCK_SPECIALTIES } from './mock_specialties.js?v=2.0.2';
+import { MOCK_GOVERNORATES } from './mock_governorates.js?v=2.0.2';
+import { MOCK_DISTRICTS } from './mock_districts.js?v=2.0.2';
+import { MOCK_LOCALITIES } from './mock_localities.js?v=2.0.2';
 
 let currentStep = 1;
 const totalSteps = 3;
@@ -73,53 +73,48 @@ function sanitizeDropdownValue(value) {
 
 // Security check - validate legitimate client access
 function validateClientAccess() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const clientId = urlParams.get("client_id");
-  const codeChallenge = urlParams.get("code_challenge");
-  const kcRole = urlParams.get("kc_role");
-  const ALLOWED_CLIENTS = ["doctaura-app"];
-  const isAllowedClient = ALLOWED_CLIENTS.includes(clientId);
+    const urlParams = new URLSearchParams(window.location.search);
+    const clientId = urlParams.get("client_id");
+    const codeChallenge = urlParams.get("code_challenge");
+    const kcRole = urlParams.get("kc_role");
+    const ALLOWED_CLIENTS = ["doctaura-app"];
+    const isAllowedClient = ALLOWED_CLIENTS.includes(clientId);
 
-  // Log all parameters for debugging
-  console.log("[Doctaura Registration] Validating client access:", {
-    clientId,
-    hasCodeChallenge: !!codeChallenge,
-    kcRole,
-    isAllowedClient,
-    allParams: Object.fromEntries(urlParams)
-  });
+    console.log('clientId: ',clientId)
+    console.log('codeChallenge: ',codeChallenge)
+    console.log('kcRole: ',kcRole)
+    console.log('isAllowedClient: ',isAllowedClient)
 
-  // Check if this is a legitimate client application request
-  // Must have client_id and kc_role (code_challenge only present during OAuth flow)
-  const isLegitimateClientRequest = clientId && kcRole && isAllowedClient;
+    // Check if this is a legitimate client application request
+    // Must have client_id, code_challenge (PKCE), and kc_role
+    const isLegitimateClientRequest = clientId && codeChallenge && kcRole && isAllowedClient;
 
-  if (!isLegitimateClientRequest) {
-    // Hide registration form
-    const registrationContainer = document.getElementById(
-      "registration-form-container"
-    );
-    if (registrationContainer) {
-      registrationContainer.style.display = "none";
+    if (!isLegitimateClientRequest) {
+      // Hide registration form
+      const registrationContainer = document.getElementById(
+        "registration-form-container"
+      );
+      if (registrationContainer) {
+        registrationContainer.style.display = "none";
+      }
+
+      // Show unauthorized access message
+      const unauthorizedContainer = document.getElementById(
+        "unauthorized-access"
+      );
+      if (unauthorizedContainer) {
+        unauthorizedContainer.style.display = "block";
+      }
+
+      console.error(
+        "Unauthorized registration attempt detected - missing required PKCE parameters"
+      );
+      return false;
     }
 
-    // Show unauthorized access message
-    const unauthorizedContainer = document.getElementById(
-      "unauthorized-access"
-    );
-    if (unauthorizedContainer) {
-      unauthorizedContainer.style.display = "block";
-    }
-
-    console.error(
-      "[Doctaura Registration] Unauthorized registration attempt - missing required parameters:",
-      { clientId, kcRole, isAllowedClient }
-    );
-    return false;
+    console.log("Legitimate client request validated - registration enabled");
+    return true;
   }
-
-  console.log("[Doctaura Registration] Legitimate client request validated - registration enabled");
-  return true;
-}
 
   async function loadCountries() {
     const countrySelect = document.querySelector(
