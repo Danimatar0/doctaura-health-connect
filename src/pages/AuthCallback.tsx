@@ -44,12 +44,14 @@ const AuthCallback = () => {
       }
 
       try {
+        // Get OAuth state BEFORE handleCallback clears it
+        const oauthState = keycloakService.getOAuthState();
+        const isNewRegistration = oauthState?.isNewRegistration === true;
+
         // Exchange code for tokens
         const user = await keycloakService.handleCallback(code, state || undefined);
 
         // Check if this is a new patient registration
-        const oauthState = keycloakService.getOAuthState();
-        const isNewRegistration = oauthState?.isNewRegistration === true;
         const isPatient = user.role === "patient";
 
         // If this is a new patient registration, create patient record in backend
