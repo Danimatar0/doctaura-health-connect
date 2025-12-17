@@ -3,6 +3,7 @@ import { Search, MapPin, LogIn, UserCircle, Menu, Settings } from "lucide-react"
 import { useNavigate, useLocation } from "react-router-dom";
 import { keycloakService } from "@/services/keycloakService";
 import { useState, useEffect } from "react";
+import { useFeatureFlags } from "@/contexts/FeatureFlagsContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +30,11 @@ const Navigation = () => {
   const [userName, setUserName] = useState<string>("");
   const [userRole, setUserRole] = useState<string>("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { featureFlags } = useFeatureFlags();
+
+  // Only hide pharmacy for authenticated patients when flag is disabled
+  const showPharmacyFinder =
+    !isAuthenticated || userRole !== "patient" || featureFlags.pharmacyFinder;
 
   useEffect(() => {
     const user = keycloakService.getCurrentUser();
@@ -81,14 +87,16 @@ const Navigation = () => {
               <Search className="h-4 w-4" />
               Find Doctors
             </Button>
-            <Button
-              variant={isActivePath('/pharmacies') ? 'secondary' : 'ghost'}
-              onClick={() => handleNavigate('/pharmacies')}
-              className="gap-2"
-            >
-              <MapPin className="h-4 w-4" />
-              Pharmacy Locator
-            </Button>
+            {showPharmacyFinder && (
+              <Button
+                variant={isActivePath('/pharmacies') ? 'secondary' : 'ghost'}
+                onClick={() => handleNavigate('/pharmacies')}
+                className="gap-2"
+              >
+                <MapPin className="h-4 w-4" />
+                Pharmacy Locator
+              </Button>
+            )}
           </div>
 
           {/* Right Side - Auth Buttons */}
@@ -172,14 +180,16 @@ const Navigation = () => {
                           <Search className="h-4 w-4" />
                           Find Doctors
                         </Button>
-                        <Button
-                          variant="ghost"
-                          className="w-full justify-start gap-2"
-                          onClick={() => handleNavigate('/pharmacies')}
-                        >
-                          <MapPin className="h-4 w-4" />
-                          Pharmacy Locator
-                        </Button>
+                        {showPharmacyFinder && (
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start gap-2"
+                            onClick={() => handleNavigate('/pharmacies')}
+                          >
+                            <MapPin className="h-4 w-4" />
+                            Pharmacy Locator
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           className="w-full justify-start"

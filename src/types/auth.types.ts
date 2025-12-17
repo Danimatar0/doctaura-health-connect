@@ -70,6 +70,7 @@ export interface KeycloakUserInfo {
   preferred_username?: string;
   picture?: string;
   phone_number?: string;
+  phone?: string;
   realm_access?: {
     roles: string[];
   };

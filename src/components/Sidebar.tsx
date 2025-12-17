@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -11,7 +11,6 @@ import {
   Pill,
   User,
   Settings,
-  Sliders,
   LogOut,
   Clock,
   Users,
@@ -19,12 +18,14 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { keycloakService } from "@/services/keycloakService";
+import { useFeatureFlags } from "@/contexts/FeatureFlagsContext";
 
 interface MenuItem {
   label: string;
   icon: React.ElementType;
   path: string;
   badge?: string;
+  featureFlag?: 'prescriptions' | 'medicalRecords' | 'telemedicine' | 'pharmacyFinder';
 }
 
 interface MenuSection {
@@ -37,15 +38,14 @@ const patientMenuSections: MenuSection[] = [
     items: [
       { label: "Dashboard", icon: LayoutDashboard, path: "/patient-dashboard" },
       { label: "My Appointments", icon: Calendar, path: "/patient/appointments" },
-      { label: "Medical Records", icon: FileText, path: "/medical-records" },
-      { label: "Prescriptions", icon: Pill, path: "/patient/prescriptions" },
+      { label: "Medical Records", icon: FileText, path: "/medical-records", featureFlag: "medicalRecords" },
+      { label: "Prescriptions", icon: Pill, path: "/patient/prescriptions", featureFlag: "prescriptions" },
     ],
     divider: true,
   },
   {
     items: [
       { label: "My Profile", icon: User, path: "/patient/profile" },
-      { label: "Preferences", icon: Sliders, path: "/patient/preferences" },
       { label: "Settings", icon: Settings, path: "/patient/settings" },
     ],
     divider: true,
@@ -65,7 +65,6 @@ const doctorMenuSections: MenuSection[] = [
   {
     items: [
       { label: "My Profile", icon: User, path: "/doctor/profile" },
-      { label: "Preferences", icon: Sliders, path: "/doctor/preferences" },
       { label: "Settings", icon: Settings, path: "/doctor/settings" },
     ],
     divider: true,
@@ -82,6 +81,7 @@ const Sidebar = ({ className }: SidebarProps) => {
   const [userRole, setUserRole] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { featureFlags } = useFeatureFlags();
 
   useEffect(() => {
     const user = keycloakService.getCurrentUser();
@@ -91,7 +91,26 @@ const Sidebar = ({ className }: SidebarProps) => {
     }
   }, []);
 
-  const menuSections = userRole === "doctor" ? doctorMenuSections : patientMenuSections;
+  // Filter menu sections based on feature flags
+  const menuSections = useMemo(() => {
+    const sections = userRole === "doctor" ? doctorMenuSections : patientMenuSections;
+
+    // For doctors, no filtering needed
+    if (userRole === "doctor") {
+      return sections;
+    }
+
+    // For patients, filter items based on feature flags
+    return sections.map((section) => ({
+      ...section,
+      items: section.items.filter((item) => {
+        // If no feature flag specified, always show
+        if (!item.featureFlag) return true;
+        // Check if the feature is enabled
+        return featureFlags[item.featureFlag];
+      }),
+    }));
+  }, [userRole, featureFlags]);
 
   const handleLogout = async () => {
     await keycloakService.logout();

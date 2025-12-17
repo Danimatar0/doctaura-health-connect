@@ -1,258 +1,208 @@
 /**
  * Patient Data Service
  *
- * This service provides a unified interface for accessing patient-related data.
- * It automatically toggles between mock data and API calls based on the
- * VITE_USE_MOCK_DATA environment variable.
- *
- * Usage:
- * - Set VITE_USE_MOCK_DATA=false in .env to use real API
- * - Set VITE_USE_MOCK_DATA=true (or omit) to use mock data
+ * Unified interface for patient-related data operations.
+ * Uses orval-generated APIs with mock data fallback.
  */
 
 import { env } from "@/config/env";
-import { Appointment, Prescription, Patient } from "@/types";
 import { AuthUser } from "@/types/auth.types";
+import { customInstanceWithToken } from "@/api/mutator/customInstance";
+
+// Generated API functions
+import {
+  getApiPatientsMe,
+  putApiPatientsMe,
+  postApiPatientsAppointmentsSummary,
+} from "@/api/generated/patients/patients";
+
+// Generated DTOs
+import type {
+  PatientAddRequestDto,
+  PatientAddResponseDto,
+  PatientDetailsDto,
+  PatientEditRequestDto,
+  PatientEditResponseDto,
+  PatientAppointmentsSummaryRequestDto,
+  PatientAppointmentsSummaryResponseDto,
+  Gender,
+} from "@/types/generated";
+
+// Re-export hooks for direct component usage
+export {
+  useGetApiPatientsMe,
+  usePutApiPatientsMe,
+  usePostApiPatientsAppointmentsSummary,
+} from "@/api/generated/patients/patients";
+
+// Re-export DTOs
+export type {
+  PatientAddRequestDto,
+  PatientAddResponseDto,
+  PatientDetailsDto,
+  PatientEditRequestDto,
+  PatientEditResponseDto,
+  PatientAppointmentsSummaryRequestDto,
+  PatientAppointmentsSummaryResponseDto,
+};
+
+// Mock data imports
 import { mockAppointments } from "@/data/mockAppointments";
 import { mockPrescriptions } from "@/data/mockPrescriptions";
 import { getMockPatientProfile, mockDashboardStats } from "@/data/mockPatientProfile";
+import { Appointment, Prescription, Patient } from "@/types";
 
-// API endpoints
-const API_ENDPOINTS = {
-  appointments: `${env.api.baseUrl}/api/patients/appointments`,
-  prescriptions: `${env.api.baseUrl}/api/patients/prescriptions`,
-  profile: `${env.api.baseUrl}/api/patients/profile`,
-  stats: `${env.api.baseUrl}/api/patients/stats`,
-  registration: `${env.api.baseUrl}/api/patients`
+// ============================================================================
+// Helpers
+// ============================================================================
+
+const GenderMap: Record<string, Gender> = {
+  male: 0,
+  female: 1,
+  other: 2,
 };
 
-// Types for patient registration
-export interface PatientRegistrationRequest {
-  firstname: string;
-  lastname: string;
-  phone?: string;
-  gender: number; // 0 = male, 1 = female, 2 = other
-  dateOfBirth: string; // Format: "YYYY-MM-DD"
-  email: string;
-  governorateId?: number | null; // Optional: User's governorate ID
-  districtId?: number | null; // Optional: User's district ID
-  localityId?: number | null; // Optional: User's locality ID
-  emergencyContactName?: string;
-  emergencyContactPhone?: string;
-  bloodType?: string;
-  allergies?: string;
-  chronicConditions?: string;
-  preferredLanguage: string; // e.g., "en", "ar", "fr"
-}
-
-export interface PatientRegistrationResponse {
-  id: string;
-  message: string;
-}
-
 /**
- * Helper function to convert AuthUser (from Keycloak) to PatientRegistrationRequest
- * Maps Keycloak user attributes to the backend API format
+ * Convert AuthUser (from Keycloak) to PatientAddRequestDto
+ * Sends null for empty/missing values (backend requires null, not empty strings)
  */
-export function convertAuthUserToPatientRequest(user: AuthUser): PatientRegistrationRequest {
-  // Convert gender string to number (0 = male, 1 = female, 2 = other)
-  const genderMap: Record<string, number> = {
-    'male': 0,
-    'female': 1,
-    'other': 2,
+export function convertAuthUserToPatientRequest(user: AuthUser): PatientAddRequestDto {
+  const gender = user.gender
+    ? GenderMap[user.gender.toLowerCase()] ?? GenderMap.other
+    : GenderMap.other;
+
+  // Helper to convert empty strings to null
+  const emptyToNull = (value: string | undefined | null): string | null => {
+    return value && value.trim() !== '' ? value : null;
   };
-  const gender = user.gender ? genderMap[user.gender.toLowerCase()] ?? 2 : 2;
 
-  // Extract preferred language from locale or default to 'en'
-  const preferredLanguage = user.locale?.split('-')[0] || 'en';
-
-  // Convert location IDs to numbers (they come as strings from Keycloak)
-  const governorateId = user.governorateId ? parseInt(user.governorateId, 10) : null;
-  const districtId = user.districtId ? parseInt(user.districtId, 10) : null;
-  const localityId = user.localityId ? parseInt(user.localityId, 10) : null;
+  // Parse location IDs
+  const parseId = (value: string | undefined): number | null => {
+    if (!value) return null;
+    const parsed = parseInt(value, 10);
+    return isNaN(parsed) ? null : parsed;
+  };
 
   return {
-    firstname: user.firstName || user.name.split(' ')[0] || '',
-    lastname: user.lastName || user.name.split(' ').slice(1).join(' ') || '',
-    phone: user.phone || '',
+    firstname: emptyToNull(user.firstName || user.name.split(' ')[0]),
+    lastname: emptyToNull(user.lastName || user.name.split(' ').slice(1).join(' ')),
+    phone: emptyToNull(user.phone),
     gender,
-    dateOfBirth: user.dateOfBirth || '',
+    dateOfBirth: emptyToNull(user.dateOfBirth),
     email: user.email,
-    governorateId: isNaN(governorateId as number) ? null : governorateId,
-    districtId: isNaN(districtId as number) ? null : districtId,
-    localityId: isNaN(localityId as number) ? null : localityId,
-    emergencyContactName: '', // Not currently collected in Keycloak form - can be added later
-    emergencyContactPhone: '', // Not currently collected in Keycloak form - can be added later
-    bloodType: user.bloodType || '',
-    allergies: '', // Not currently collected in Keycloak form - can be added later
-    chronicConditions: '', // Not currently collected in Keycloak form - can be added later
-    preferredLanguage,
+    countryId: parseId(user.country), // country → countryId
+    governorateId: parseId(user.governorateId),
+    districtId: parseId(user.districtId),
+    localityId: parseId(user.localityId),
+    emergencyContactName: null,
+    emergencyContactPhone: null,
+    bloodType: emptyToNull(user.bloodType),
+    allergies: null,
+    chronicConditions: null,
   };
 }
 
-// Mock data functions (synchronous for simplicity, but wrapped in Promises)
+// ============================================================================
+// Mock Data
+// ============================================================================
+
+const mockDelay = () => new Promise(resolve => setTimeout(resolve, 100));
+
 const getMockAppointments = async (): Promise<Appointment[]> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await mockDelay();
   return mockAppointments;
 };
 
 const getMockPrescriptions = async (): Promise<Prescription[]> => {
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await mockDelay();
   return mockPrescriptions;
 };
 
 const getMockPatientProfileData = async (): Promise<Patient> => {
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await mockDelay();
   return getMockPatientProfile();
 };
 
-const getMockDashboardStats = async (): Promise<typeof mockDashboardStats> => {
-  await new Promise(resolve => setTimeout(resolve, 100));
+const getMockDashboardStats = async (): Promise<{ recordsCount: number; doctorsCount: number }> => {
+  await mockDelay();
   return mockDashboardStats;
 };
 
-// API data functions (to be implemented when backend is ready)
-const getApiAppointments = async (): Promise<Appointment[]> => {
-  const response = await fetch(API_ENDPOINTS.appointments, {
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      'Content-Type': 'application/json',
-    },
-  });
+// ============================================================================
+// Service
+// ============================================================================
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch appointments: ${response.statusText}`);
-  }
-
-  return response.json();
-};
-
-const getApiPrescriptions = async (): Promise<Prescription[]> => {
-  const response = await fetch(API_ENDPOINTS.prescriptions, {
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch prescriptions: ${response.statusText}`);
-  }
-
-  return response.json();
-};
-
-const getApiPatientProfile = async (): Promise<Patient> => {
-  const response = await fetch(API_ENDPOINTS.profile, {
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch patient profile: ${response.statusText}`);
-  }
-
-  return response.json();
-};
-
-const getApiDashboardStats = async (): Promise<{ recordsCount: number; doctorsCount: number }> => {
-  const response = await fetch(API_ENDPOINTS.stats, {
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch dashboard stats: ${response.statusText}`);
-  }
-
-  return response.json();
-};
-
-/**
- * Register a new patient in the backend system
- * This should be called after successful Keycloak registration
- */
-const registerPatient = async (
-  data: PatientRegistrationRequest,
-  token: string
-): Promise<PatientRegistrationResponse> => {
-  const response = await fetch(API_ENDPOINTS.registration, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    throw new Error(
-      errorData?.message || `Failed to register patient: ${response.statusText}`
-    );
-  }
-
-  return response.json();
-};
-
-
-// Public API - automatically switches between mock and real API based on env flag
 export const patientDataService = {
   /**
-   * Get all appointments for the current patient
+   * Get patient profile from API
+   */
+  getPatientProfile: async (): Promise<PatientDetailsDto> => {
+    return getApiPatientsMe();
+  },
+
+  /**
+   * Update patient profile
+   */
+  updatePatientProfile: async (data: PatientEditRequestDto): Promise<PatientEditResponseDto> => {
+    return putApiPatientsMe(data);
+  },
+
+  /**
+   * Register a new patient (uses explicit token for auth callback flow)
+   */
+  registerPatient: async (data: PatientAddRequestDto, token: string): Promise<PatientAddResponseDto> => {
+    return customInstanceWithToken<PatientAddResponseDto>(
+      '/api/patients',
+      token,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
+  },
+
+  /**
+   * Get appointments summary
+   */
+  getAppointmentsSummary: async (
+    data: PatientAppointmentsSummaryRequestDto
+  ): Promise<PatientAppointmentsSummaryResponseDto> => {
+    return postApiPatientsAppointmentsSummary(data);
+  },
+
+  /**
+   * Get all appointments (mock only)
    */
   getAppointments: async (): Promise<Appointment[]> => {
-    if (env.features.useMockData) {
-      return getMockAppointments();
-    }
-    return getApiAppointments();
+    return getMockAppointments();
   },
 
   /**
-   * Get all prescriptions for the current patient
+   * Get all prescriptions (mock only)
    */
   getPrescriptions: async (): Promise<Prescription[]> => {
-    if (env.features.useMockData) {
-      return getMockPrescriptions();
-    }
-    return getApiPrescriptions();
+    return getMockPrescriptions();
   },
 
   /**
-   * Get patient profile information
-   */
-  getPatientProfile: async (): Promise<Patient> => {
-    if (env.features.useMockData) {
-      return getMockPatientProfileData();
-    }
-    return getApiPatientProfile();
-  },
-
-  /**
-   * Get dashboard statistics
+   * Get dashboard statistics (mock only)
    */
   getDashboardStats: async (): Promise<{ recordsCount: number; doctorsCount: number }> => {
-    if (env.features.useMockData) {
-      return getMockDashboardStats();
-    }
-    return getApiDashboardStats();
+    return getMockDashboardStats();
   },
 
   /**
-   * Get filtered appointments by status
+   * Get appointments by status
    */
-  getAppointmentsByStatus: async (status: 'upcoming' | 'completed' | 'cancelled'): Promise<Appointment[]> => {
+  getAppointmentsByStatus: async (
+    status: 'upcoming' | 'completed' | 'cancelled'
+  ): Promise<Appointment[]> => {
     const appointments = await patientDataService.getAppointments();
     return appointments.filter(apt => apt.status === status);
   },
 
   /**
-   * Get a single appointment by ID
+   * Get appointment by ID
    */
   getAppointmentById: async (id: string): Promise<Appointment | undefined> => {
     const appointments = await patientDataService.getAppointments();
@@ -260,25 +210,10 @@ export const patientDataService = {
   },
 
   /**
-   * Get a single prescription by ID
+   * Get prescription by ID
    */
   getPrescriptionById: async (id: string): Promise<Prescription | undefined> => {
     const prescriptions = await patientDataService.getPrescriptions();
     return prescriptions.find(rx => rx.id === id);
   },
-
-  /**
-   * Register a new patient after Keycloak registration
-   * This creates the patient record in the backend system
-   */
-  registerPatient: async (
-    data: PatientRegistrationRequest,
-    token: string
-  ): Promise<PatientRegistrationResponse> => {
-    // Always call the real API for registration (no mock)
-    return registerPatient(data, token);
-  },
 };
-
-// Helper to check if using mock data
-export const isUsingMockData = () => env.features.useMockData;

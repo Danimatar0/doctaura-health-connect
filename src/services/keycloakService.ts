@@ -529,7 +529,7 @@ class KeycloakService implements IAuthService {
         name: userInfo.name || user.name,
         firstName: userInfo.given_name || data.firstName,
         lastName: userInfo.family_name || data.lastName,
-        phone: userInfo.phone_number || extractAttribute("phone") || data.phone,
+        phone: userInfo.phone || userInfo.phone_number || extractAttribute("phone") || data.phone,
         gender: extractAttribute("gender") || data.gender,
         dateOfBirth: extractAttribute("dateOfBirth") || data.dateOfBirth,
         country: extractAttribute("country") || data.country,
@@ -690,8 +690,14 @@ class KeycloakService implements IAuthService {
 
     const expiresAt = Date.now() + (tokens.expires_in * 1000);
 
-    // Extract custom attributes
+    // Extract custom attributes (check top-level first, then attributes object)
     const extractAttribute = (key: string): string | undefined => {
+      // First check top-level (where mappers put values)
+      const topLevel = (userInfo as Record<string, unknown>)[key];
+      if (topLevel !== undefined) {
+        return String(topLevel);
+      }
+      // Fallback to attributes object
       const value = userInfo.attributes?.[key];
       return Array.isArray(value) ? value[0] : value;
     };
@@ -705,7 +711,7 @@ class KeycloakService implements IAuthService {
       lastName: userInfo.family_name,
       role: finalRole,
       profilePicture: userInfo.picture,
-      phone: userInfo.phone_number,
+      phone: userInfo.phone || userInfo.phone_number,
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
       idToken: tokens.id_token,

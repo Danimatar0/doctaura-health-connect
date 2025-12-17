@@ -19,7 +19,6 @@ const Register = () => {
     if (registrationStrategy === "webapp") {
       // Pass the selected role to Keycloak
       keycloakService.redirectToRegister(selectedRole);
-      /// TODO: Handle local registration here
     } else {
       // Scenario 2: Keycloak theme handles role selection
       // Don't pass role, let Keycloak theme handle it

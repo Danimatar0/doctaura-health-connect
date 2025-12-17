@@ -3,8 +3,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { FeatureFlagsProvider } from "@/contexts/FeatureFlagsContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import PublicRoute from "@/components/PublicRoute";
+import FeatureRoute from "@/components/FeatureRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -24,16 +26,18 @@ import PatientAppointments from "./pages/PatientAppointments";
 import DoctorAppointments from "./pages/DoctorAppointments";
 import PatientPrescriptions from "./pages/PatientPrescriptions";
 import DoctorPrescriptions from "./pages/DoctorPrescriptions";
+import Preferences from "./pages/Preferences";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+    <FeatureFlagsProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
         <Routes>
           {/* Public Landing Page */}
           <Route path="/" element={<Index />} />
@@ -93,7 +97,13 @@ const App = () => (
             path="/medical-records"
             element={
               <ProtectedRoute allowedRoles={["patient"]}>
-                <MedicalRecords />
+                <FeatureRoute
+                  featureFlag="medicalRecords"
+                  featureTitle="Medical Records"
+                  featureDescription="Access to medical records is coming soon. You'll be able to view and manage your complete health history here."
+                >
+                  <MedicalRecords />
+                </FeatureRoute>
               </ProtectedRoute>
             }
           />
@@ -117,15 +127,13 @@ const App = () => (
             path="/patient/prescriptions"
             element={
               <ProtectedRoute allowedRoles={["patient"]}>
-                <PatientPrescriptions />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/patient/preferences"
-            element={
-              <ProtectedRoute allowedRoles={["patient"]}>
-                <NotFound />
+                <FeatureRoute
+                  featureFlag="prescriptions"
+                  featureTitle="Prescriptions"
+                  featureDescription="Access to prescriptions is coming soon. You'll be able to view and manage all your prescriptions here."
+                >
+                  <PatientPrescriptions />
+                </FeatureRoute>
               </ProtectedRoute>
             }
           />
@@ -133,7 +141,7 @@ const App = () => (
             path="/patient/settings"
             element={
               <ProtectedRoute allowedRoles={["patient"]}>
-                <NotFound />
+                <Preferences />
               </ProtectedRoute>
             }
           />
@@ -188,26 +196,19 @@ const App = () => (
             }
           />
           <Route
-            path="/doctor/preferences"
-            element={
-              <ProtectedRoute allowedRoles={["doctor"]}>
-                <NotFound />
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/doctor/settings"
             element={
               <ProtectedRoute allowedRoles={["doctor"]}>
-                <NotFound />
+                <Preferences />
               </ProtectedRoute>
             }
           />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </FeatureFlagsProvider>
   </QueryClientProvider>
 );
 

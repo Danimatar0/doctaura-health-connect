@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,37 +12,163 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { keycloakService } from "@/services/keycloakService";
+import { locationService, Country, Location } from "@/services/locationService";
 import { AuthUser, ProfileUpdateData } from "@/types/auth.types";
+import type { PatientDetailsDto } from "@/types/generated";
 import { Loader2 } from "lucide-react";
 
 interface EditProfileDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   user: AuthUser;
+  patientData?: PatientDetailsDto | null;
   onProfileUpdated: (updatedUser: AuthUser) => void;
 }
+
+// Gender enum to string mapping
+const GenderDisplay: Record<number, string> = {
+  0: "male",
+  1: "female",
+  2: "other",
+};
 
 const EditProfileDialog = ({
   open,
   onOpenChange,
   user,
+  patientData,
   onProfileUpdated,
 }: EditProfileDialogProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+
+  // Location dropdown states
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [governorates, setGovernorates] = useState<Location[]>([]);
+  const [districts, setDistricts] = useState<Location[]>([]);
+  const [localities, setLocalities] = useState<Location[]>([]);
+  const [loadingLocations, setLoadingLocations] = useState(false);
+
+  // Form data - prioritize patientData over user data
   const [formData, setFormData] = useState<ProfileUpdateData>({
-    firstName: user.firstName || "",
-    lastName: user.lastName || "",
-    phone: user.phone || "",
-    gender: user.gender || "",
-    dateOfBirth: user.dateOfBirth || "",
-    country: user.country || "",
-    locale: user.locale || "",
-    bloodType: user.bloodType || "",
+    firstName: patientData?.firstName || user.firstName || "",
+    lastName: patientData?.lastName || user.lastName || "",
+    phone: patientData?.phone || user.phone || "",
+    gender: patientData?.gender !== undefined
+      ? GenderDisplay[patientData.gender]
+      : user.gender || "",
+    dateOfBirth: patientData?.dateOfBirth?.split("T")[0] || user.dateOfBirth || "",
+    country: patientData?.countryId?.toString() || user.country || "",
+    governorateId: patientData?.governorateId?.toString() || user.governorateId || "",
+    districtId: patientData?.districtId?.toString() || user.districtId || "",
+    localityId: patientData?.localityId?.toString() || user.localityId || "",
+    locale: patientData?.preferredLanguage || user.locale || "",
+    bloodType: patientData?.bloodType || user.bloodType || "",
     specialty: user.specialty || "",
     medicalCertification: user.medicalCertification || "",
   });
   const [errors, setErrors] = useState<Partial<Record<keyof ProfileUpdateData, string>>>({});
+
+  // Load countries on mount
+  useEffect(() => {
+    const loadCountries = async () => {
+      try {
+        const data = await locationService.getCountries();
+        setCountries(data);
+      } catch (e) {
+        console.error("Failed to load countries:", e);
+      }
+    };
+
+    if (open) {
+      loadCountries();
+    }
+  }, [open]);
+
+  // Load governorates on mount (they're independent)
+  useEffect(() => {
+    const loadGovernorates = async () => {
+      try {
+        const data = await locationService.getGovernorates();
+        setGovernorates(data);
+      } catch (e) {
+        console.error("Failed to load governorates:", e);
+      }
+    };
+
+    if (open) {
+      loadGovernorates();
+    }
+  }, [open]);
+
+  // Load districts when governorate changes
+  useEffect(() => {
+    const loadDistricts = async () => {
+      if (!formData.governorateId) {
+        setDistricts([]);
+        return;
+      }
+
+      try {
+        setLoadingLocations(true);
+        const data = await locationService.getDistrictsByGovernorate(parseInt(formData.governorateId));
+        setDistricts(data);
+      } catch (e) {
+        console.error("Failed to load districts:", e);
+        setDistricts([]);
+      } finally {
+        setLoadingLocations(false);
+      }
+    };
+
+    loadDistricts();
+  }, [formData.governorateId]);
+
+  // Load localities when district changes
+  useEffect(() => {
+    const loadLocalities = async () => {
+      if (!formData.districtId) {
+        setLocalities([]);
+        return;
+      }
+
+      try {
+        setLoadingLocations(true);
+        const data = await locationService.getLocalitiesByDistrict(parseInt(formData.districtId));
+        setLocalities(data);
+      } catch (e) {
+        console.error("Failed to load localities:", e);
+        setLocalities([]);
+      } finally {
+        setLoadingLocations(false);
+      }
+    };
+
+    loadLocalities();
+  }, [formData.districtId]);
+
+  // Reset form when dialog opens with new data
+  useEffect(() => {
+    if (open) {
+      setFormData({
+        firstName: patientData?.firstName || user.firstName || "",
+        lastName: patientData?.lastName || user.lastName || "",
+        phone: patientData?.phone || user.phone || "",
+        gender: patientData?.gender !== undefined
+          ? GenderDisplay[patientData.gender]
+          : user.gender || "",
+        dateOfBirth: patientData?.dateOfBirth?.split("T")[0] || user.dateOfBirth || "",
+        country: patientData?.countryId?.toString() || user.country || "",
+        governorateId: patientData?.governorateId?.toString() || user.governorateId || "",
+        districtId: patientData?.districtId?.toString() || user.districtId || "",
+        localityId: patientData?.localityId?.toString() || user.localityId || "",
+        locale: patientData?.preferredLanguage || user.locale || "",
+        bloodType: patientData?.bloodType || user.bloodType || "",
+        specialty: user.specialty || "",
+        medicalCertification: user.medicalCertification || "",
+      });
+    }
+  }, [open, patientData, user]);
 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof ProfileUpdateData, string>> = {};
@@ -104,10 +230,20 @@ const EditProfileDialog = ({
   };
 
   const handleInputChange = (field: keyof ProfileUpdateData, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setFormData((prev) => {
+      const newData = { ...prev, [field]: value };
+
+      // Reset dependent fields when parent changes
+      if (field === "governorateId") {
+        newData.districtId = "";
+        newData.localityId = "";
+      } else if (field === "districtId") {
+        newData.localityId = "";
+      }
+
+      return newData;
+    });
+
     // Clear error for this field when user starts typing
     if (errors[field]) {
       setErrors((prev) => ({
@@ -117,18 +253,20 @@ const EditProfileDialog = ({
     }
   };
 
+  const selectClassName = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[90vw] max-w-[90vw] lg:w-[50vw] lg:max-w-[50vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Profile</DialogTitle>
           <DialogDescription>
-            Update your personal information. Username and user ID cannot be changed.
+            Update your personal information. Email and user ID cannot be changed.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
-          <div className="space-y-4 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
             {/* Email - Read Only */}
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
@@ -139,7 +277,6 @@ const EditProfileDialog = ({
                 disabled
                 className="bg-muted cursor-not-allowed"
               />
-              <p className="text-xs text-muted-foreground">Email cannot be changed</p>
             </div>
 
             {/* User ID - Read Only */}
@@ -151,7 +288,6 @@ const EditProfileDialog = ({
                 disabled
                 className="bg-muted cursor-not-allowed font-mono text-xs"
               />
-              <p className="text-xs text-muted-foreground">User ID cannot be changed</p>
             </div>
 
             {/* First Name */}
@@ -213,7 +349,7 @@ const EditProfileDialog = ({
                 value={formData.gender}
                 onChange={(e) => handleInputChange("gender", e.target.value)}
                 disabled={loading}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className={selectClassName}
               >
                 <option value="">Select gender</option>
                 <option value="male">Male</option>
@@ -238,35 +374,6 @@ const EditProfileDialog = ({
               )}
             </div>
 
-            {/* Country */}
-            <div className="space-y-2">
-              <Label htmlFor="country">Country</Label>
-              <Input
-                id="country"
-                value={formData.country}
-                onChange={(e) => handleInputChange("country", e.target.value)}
-                placeholder="Enter your country"
-                disabled={loading}
-              />
-            </div>
-
-            {/* Locale */}
-            <div className="space-y-2">
-              <Label htmlFor="locale">Language/Locale</Label>
-              <select
-                id="locale"
-                value={formData.locale}
-                onChange={(e) => handleInputChange("locale", e.target.value)}
-                disabled={loading}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <option value="">Select language</option>
-                <option value="en">English</option>
-                <option value="ar">Arabic</option>
-                <option value="fr">French</option>
-              </select>
-            </div>
-
             {/* Blood Type */}
             <div className="space-y-2">
               <Label htmlFor="bloodType">Blood Type</Label>
@@ -275,7 +382,7 @@ const EditProfileDialog = ({
                 value={formData.bloodType}
                 onChange={(e) => handleInputChange("bloodType", e.target.value)}
                 disabled={loading}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className={selectClassName}
               >
                 <option value="">Select blood type</option>
                 <option value="A+">A+</option>
@@ -289,11 +396,101 @@ const EditProfileDialog = ({
               </select>
             </div>
 
+            {/* Country */}
+            <div className="space-y-2">
+              <Label htmlFor="country">Country</Label>
+              <select
+                id="country"
+                value={formData.country}
+                onChange={(e) => handleInputChange("country", e.target.value)}
+                disabled={loading}
+                className={selectClassName}
+              >
+                <option value="">Select country</option>
+                {countries.map((country) => (
+                  <option key={country.id} value={country.id.toString()}>
+                    {country.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Governorate */}
+            <div className="space-y-2">
+              <Label htmlFor="governorateId">Governorate</Label>
+              <select
+                id="governorateId"
+                value={formData.governorateId}
+                onChange={(e) => handleInputChange("governorateId", e.target.value)}
+                disabled={loading}
+                className={selectClassName}
+              >
+                <option value="">Select governorate</option>
+                {governorates.map((gov) => (
+                  <option key={gov.id} value={gov.id.toString()}>
+                    {gov.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* District */}
+            <div className="space-y-2">
+              <Label htmlFor="districtId">District</Label>
+              <select
+                id="districtId"
+                value={formData.districtId}
+                onChange={(e) => handleInputChange("districtId", e.target.value)}
+                disabled={loading || !formData.governorateId || loadingLocations}
+                className={selectClassName}
+              >
+                <option value="">
+                  {!formData.governorateId
+                    ? "Select governorate first"
+                    : loadingLocations
+                      ? "Loading..."
+                      : "Select district"}
+                </option>
+                {districts.map((district) => (
+                  <option key={district.id} value={district.id.toString()}>
+                    {district.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Locality */}
+            <div className="space-y-2">
+              <Label htmlFor="localityId">Locality / City</Label>
+              <select
+                id="localityId"
+                value={formData.localityId}
+                onChange={(e) => handleInputChange("localityId", e.target.value)}
+                disabled={loading || !formData.districtId || loadingLocations}
+                className={selectClassName}
+              >
+                <option value="">
+                  {!formData.districtId
+                    ? "Select district first"
+                    : loadingLocations
+                      ? "Loading..."
+                      : "Select locality"}
+                </option>
+                {localities.map((locality) => (
+                  <option key={locality.id} value={locality.id.toString()}>
+                    {locality.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Doctor-specific fields */}
             {user.role === "doctor" && (
               <>
-                <hr className="my-4" />
-                <h3 className="text-sm font-semibold">Professional Information</h3>
+                <div className="col-span-full">
+                  <hr className="my-4" />
+                  <h3 className="text-sm font-semibold">Professional Information</h3>
+                </div>
 
                 {/* Specialty */}
                 <div className="space-y-2">

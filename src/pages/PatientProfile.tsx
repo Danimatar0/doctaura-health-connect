@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Sidebar from "@/components/Sidebar";
 import Footer from "@/components/Footer";
@@ -10,35 +11,135 @@ import {
   User,
   Mail,
   Phone,
-  Shield,
   Edit,
   CheckCircle2,
   XCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { keycloakService } from "@/services/keycloakService";
+import { patientDataService } from "@/services/patientDataService";
+import { locationService, Country, Location } from "@/services/locationService";
+import { ApiError } from "@/api/mutator/customInstance";
 import { AuthUser } from "@/types/auth.types";
+import type { PatientDetailsDto } from "@/types/generated";
 import EditProfileDialog from "@/components/EditProfileDialog";
 
+// Gender enum to string mapping
+const GenderDisplay: Record<number, string> = {
+  0: "Male",
+  1: "Female",
+  2: "Other",
+};
+
+// Location names state
+interface LocationNames {
+  country: string | null;
+  governorate: string | null;
+  district: string | null;
+  locality: string | null;
+}
+
 const PatientProfile = () => {
+  const navigate = useNavigate();
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [patientData, setPatientData] = useState<PatientDetailsDto | null>(null);
+  const [locationNames, setLocationNames] = useState<LocationNames>({
+    country: null,
+    governorate: null,
+    district: null,
+    locality: null,
+  });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   useEffect(() => {
-    const fetchUserData = async () => {
+    const fetchProfileData = async () => {
+      // Check if user is authenticated
+      if (!keycloakService.isAuthenticated()) {
+        navigate("/login");
+        return;
+      }
+
       try {
         setLoading(true);
+        setError(null);
+
+        // Get auth user from session
         const currentUser = keycloakService.getCurrentUser();
         setUser(currentUser);
-      } catch (error) {
-        console.error("Error fetching user data:", error);
+
+        // Fetch patient details from API
+        const patientDetails = await patientDataService.getPatientProfile();
+        setPatientData(patientDetails);
+
+        // Fetch location names based on IDs
+        const names: LocationNames = {
+          country: null,
+          governorate: null,
+          district: null,
+          locality: null,
+        };
+
+        // Fetch country name
+        if (patientDetails.countryId) {
+          try {
+            const countries = await locationService.getCountries();
+            const country = countries.find(c => c.id === patientDetails.countryId);
+            names.country = country?.name || null;
+          } catch (e) {
+            console.error("Failed to fetch country:", e);
+          }
+        }
+
+        // Fetch governorate name
+        if (patientDetails.governorateId) {
+          try {
+            const location = await locationService.getLocationById(patientDetails.governorateId);
+            names.governorate = location?.name || null;
+          } catch (e) {
+            console.error("Failed to fetch governorate:", e);
+          }
+        }
+
+        // Fetch district name
+        if (patientDetails.districtId) {
+          try {
+            const location = await locationService.getLocationById(patientDetails.districtId);
+            names.district = location?.name || null;
+          } catch (e) {
+            console.error("Failed to fetch district:", e);
+          }
+        }
+
+        // Fetch locality name
+        if (patientDetails.localityId) {
+          try {
+            const location = await locationService.getLocationById(patientDetails.localityId);
+            names.locality = location?.name || null;
+          } catch (e) {
+            console.error("Failed to fetch locality:", e);
+          }
+        }
+
+        setLocationNames(names);
+      } catch (err) {
+        console.error("Error fetching profile data:", err);
+
+        // Handle 401 - redirect to login
+        if (err instanceof ApiError && err.status === 401) {
+          navigate("/login");
+          return;
+        }
+
+        setError("Oops, something went wrong. Please try again.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUserData();
-  }, []);
+    fetchProfileData();
+  }, [navigate]);
 
   const handleProfileUpdated = (updatedUser: AuthUser) => {
     setUser(updatedUser);
@@ -60,14 +161,19 @@ const PatientProfile = () => {
     );
   }
 
-  if (!user) {
+  if (error || !user) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navigation />
         <Sidebar />
         <main className="flex-1 pt-24 pb-16 pl-64 bg-muted/30 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-destructive mb-4">Failed to load profile</p>
+          <div className="text-center space-y-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-destructive/10">
+              <AlertTriangle className="h-8 w-8 text-destructive" />
+            </div>
+            <h2 className="text-xl font-semibold text-foreground">
+              {error || "Oops, something went wrong. Please try again."}
+            </h2>
             <Button onClick={() => window.location.reload()}>Retry</Button>
           </div>
         </main>
@@ -129,16 +235,12 @@ const PatientProfile = () => {
                     <Mail className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground break-all">{user.email}</span>
                   </div>
-                  {user.phone && (
+                  {(patientData?.phone || user.phone) && (
                     <div className="flex items-center gap-3 text-sm">
                       <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">{user.phone}</span>
+                      <span className="text-muted-foreground">{patientData?.phone || user.phone}</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-3 text-sm">
-                    <Shield className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{user.provider}</span>
-                  </div>
                 </div>
 
                 <Separator className="my-4" />
@@ -163,7 +265,7 @@ const PatientProfile = () => {
             <Card className="lg:col-span-2">
               <CardHeader>
                 <CardTitle>Personal Information</CardTitle>
-                <CardDescription>Your personal details from Keycloak</CardDescription>
+                <CardDescription>Your personal details</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -171,82 +273,128 @@ const PatientProfile = () => {
                     <label className="text-sm font-medium text-muted-foreground">
                       First Name
                     </label>
-                    <p className="mt-1 text-base">{user.firstName || "Not provided"}</p>
+                    <p className="mt-1 text-base">{patientData?.firstName || user.firstName || "Not provided"}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">
                       Last Name
                     </label>
-                    <p className="mt-1 text-base">{user.lastName || "Not provided"}</p>
+                    <p className="mt-1 text-base">{patientData?.lastName || user.lastName || "Not provided"}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">
                       Email Address
                     </label>
-                    <p className="mt-1 text-base">{user.email}</p>
+                    <p className="mt-1 text-base">{patientData?.email || user.email}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">
                       Phone Number
                     </label>
-                    <p className="mt-1 text-base">{user.phone || "Not provided"}</p>
+                    <p className="mt-1 text-base">{patientData?.phone || user.phone || "Not provided"}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">
                       Gender
                     </label>
-                    <p className="mt-1 text-base capitalize">{user.gender || "Not provided"}</p>
+                    <p className="mt-1 text-base">
+                      {patientData?.gender !== undefined
+                        ? GenderDisplay[patientData.gender] || "Not provided"
+                        : user.gender || "Not provided"}
+                    </p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">
                       Date of Birth
                     </label>
                     <p className="mt-1 text-base">
-                      {user.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString() : "Not provided"}
+                      {patientData?.dateOfBirth
+                        ? new Date(patientData.dateOfBirth).toLocaleDateString()
+                        : user.dateOfBirth
+                          ? new Date(user.dateOfBirth).toLocaleDateString()
+                          : "Not provided"}
                     </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">
-                      Blood Type
-                    </label>
-                    <p className="mt-1 text-base">{user.bloodType || "Not provided"}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">
                       Country
                     </label>
-                    <p className="mt-1 text-base">{user.country || "Not provided"}</p>
+                    <p className="mt-1 text-base">{locationNames.country || "N/A"}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">
-                      Language/Locale
+                      Governorate
                     </label>
-                    <p className="mt-1 text-base uppercase">{user.locale || "Not provided"}</p>
+                    <p className="mt-1 text-base">{locationNames.governorate || "N/A"}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">User ID</label>
-                    <p className="mt-1 text-base text-xs font-mono truncate" title={user.id}>
-                      {user.id}
-                    </p>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      District
+                    </label>
+                    <p className="mt-1 text-base">{locationNames.district || "N/A"}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Locality
+                    </label>
+                    <p className="mt-1 text-base">{locationNames.locality || "N/A"}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Medical Information Card - Placeholder for future backend integration */}
+            {/* Medical Information Card */}
             <Card className="lg:col-span-3">
               <CardHeader>
                 <CardTitle>Medical Information</CardTitle>
                 <CardDescription>
-                  Additional medical details will be loaded from the backend API
+                  Your medical details and emergency contacts
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>Medical details will be integrated with backend API in the future</p>
-                  <p className="text-sm mt-2">
-                    This section will include medical history, allergies, medications, etc.
-                  </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Blood Type
+                    </label>
+                    <p className="mt-1 text-base">{patientData?.bloodType || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Allergies
+                    </label>
+                    <p className="mt-1 text-base">{patientData?.allergies || "None reported"}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Chronic Conditions
+                    </label>
+                    <p className="mt-1 text-base">{patientData?.chronicConditions || "None reported"}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Emergency Contact Name
+                    </label>
+                    <p className="mt-1 text-base">{patientData?.emergencyContactName || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Emergency Contact Phone
+                    </label>
+                    <p className="mt-1 text-base">{patientData?.emergencyContactPhone || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Account Status
+                    </label>
+                    <p className="mt-1 text-base">
+                      {patientData?.isActive ? (
+                        <span className="text-green-600">Active</span>
+                      ) : (
+                        <span className="text-muted-foreground">Inactive</span>
+                      )}
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -262,6 +410,7 @@ const PatientProfile = () => {
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
           user={user}
+          patientData={patientData}
           onProfileUpdated={handleProfileUpdated}
         />
       )}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { keycloakService } from "@/services/keycloakService";
 import { patientDataService, convertAuthUserToPatientRequest } from "@/services/patientDataService";
@@ -12,8 +12,17 @@ const AuthCallback = () => {
   const { toast } = useToast();
   const [status, setStatus] = useState<"processing" | "success" | "error">("processing");
 
+  // Prevent double execution in React 18 StrictMode
+  const isProcessing = useRef(false);
+
   useEffect(() => {
     const handleCallback = async () => {
+      // Guard against double execution
+      if (isProcessing.current) {
+        console.log("AuthCallback: Already processing, skipping duplicate call");
+        return;
+      }
+      isProcessing.current = true;
       const code = searchParams.get("code");
       const state = searchParams.get("state");
       const error = searchParams.get("error");
