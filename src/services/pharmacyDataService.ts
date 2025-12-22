@@ -16,9 +16,9 @@ import { mockPharmacies } from "@/data/mockPharmacies";
 
 // API endpoints
 const API_ENDPOINTS = {
-  pharmacies: `${env.api.baseUrl}/api/pharmacies`,
-  pharmacyById: (id: string) => `${env.api.baseUrl}/api/pharmacies/${id}`,
-  searchPharmacies: `${env.api.baseUrl}/api/pharmacies/search`,
+  pharmacies: `${env.api.baseUrl}/pharmacies`,
+  pharmacyById: (id: string) => `${env.api.baseUrl}/pharmacies/${id}`,
+  searchPharmacies: `${env.api.baseUrl}/pharmacies/search`,
 };
 
 // Mock data functions
@@ -35,6 +35,7 @@ const getMockPharmacyById = async (id: string): Promise<Pharmacy | undefined> =>
 // API data functions
 const getApiPharmacies = async (): Promise<Pharmacy[]> => {
   const response = await fetch(API_ENDPOINTS.pharmacies, {
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
     },
@@ -49,6 +50,7 @@ const getApiPharmacies = async (): Promise<Pharmacy[]> => {
 
 const getApiPharmacyById = async (id: string): Promise<Pharmacy | undefined> => {
   const response = await fetch(API_ENDPOINTS.pharmacyById(id), {
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
     },

@@ -27,11 +27,19 @@ const Hero = () => {
             <div className="flex flex-col sm:flex-row gap-4">
               <Button
                 size="lg"
-                onClick={() => navigate('/doctors')}
+                onClick={() => navigate('/register')}
                 className="gradient-hero text-white shadow-soft hover:shadow-hover transition-smooth group"
               >
-                Find a Doctor
+                Get Started
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-smooth" />
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => navigate('/doctors')}
+                className="border-primary text-primary hover:bg-primary/5 transition-smooth"
+              >
+                Find a Doctor
               </Button>
             </div>
 

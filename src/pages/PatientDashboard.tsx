@@ -45,16 +45,17 @@ const PatientDashboard = () => {
     const fetchAppointmentsSummary = async () => {
       // Check if user is authenticated
       if (!keycloakService.isAuthenticated()) {
+        console.log("[PatientDashboard] User not authenticated, redirecting to login");
         navigate("/login");
         return;
       }
 
       fetchedRef.current = true;
-
       try {
         setLoading(true);
         setError(null);
-
+        
+        console.log("[PatientDashboard] User authenticated, fetching appointments summary");
         const data = await patientDataService.getAppointmentsSummary({
           includeCancelled: false,
         });
@@ -63,7 +64,6 @@ const PatientDashboard = () => {
 
         // Update feature flags in context (will also cache them)
         const apiFlags = (data as AppointmentsSummaryWithFlags).featureFlags;
-        console.log('[PatientDashboard] Raw API response featureFlags:', JSON.stringify(apiFlags));
         updateFeatureFlags(apiFlags);
       } catch (err: unknown) {
         console.error("Error fetching appointments summary:", err);

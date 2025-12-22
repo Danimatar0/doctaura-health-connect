@@ -152,7 +152,7 @@ export const patientDataService = {
    */
   registerPatient: async (data: PatientAddRequestDto, token: string): Promise<PatientAddResponseDto> => {
     return customInstanceWithToken<PatientAddResponseDto>(
-      '/api/patients',
+      '/patients',
       token,
       {
         method: 'POST',

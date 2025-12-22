@@ -32,35 +32,35 @@ export interface Location {
  * Get location by ID (any type)
  */
 export const getLocationById = async (id: number): Promise<Location> => {
-  return customInstance<Location>(`/api/Locations/${id}`);
+  return customInstance<Location>(`/Locations/${id}`);
 };
 
 /**
  * Get all countries
  */
 export const getCountries = async (): Promise<Country[]> => {
-  return customInstance<Country[]>('/api/Locations/countries');
+  return customInstance<Country[]>('/Locations/countries');
 };
 
 /**
  * Get all governorates
  */
 export const getGovernorates = async (): Promise<Location[]> => {
-  return customInstance<Location[]>('/api/Locations/governorates');
+  return customInstance<Location[]>('/Locations/governorates');
 };
 
 /**
  * Get districts by governorate ID
  */
 export const getDistrictsByGovernorate = async (governorateId: number): Promise<Location[]> => {
-  return customInstance<Location[]>(`/api/Locations/governorates/${governorateId}/districts`);
+  return customInstance<Location[]>(`/Locations/governorates/${governorateId}/districts`);
 };
 
 /**
  * Get localities by district ID
  */
 export const getLocalitiesByDistrict = async (districtId: number): Promise<Location[]> => {
-  return customInstance<Location[]>(`/api/Locations/districts/${districtId}/localities`);
+  return customInstance<Location[]>(`/Locations/districts/${districtId}/localities`);
 };
 
 // ============================================================================

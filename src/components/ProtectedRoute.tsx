@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { keycloakService } from "@/services/keycloakService";
+import { authService } from "@/services/authService";
 import { UserRole } from "@/types/auth.types";
 
 interface ProtectedRouteProps {
@@ -23,12 +23,12 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
     const checkAuth = async () => {
       try {
         // Check if user is authenticated
-        const authenticated = keycloakService.isAuthenticated();
+        const authenticated = authService.isAuthenticated();
         setIsAuthenticated(authenticated);
 
         if (authenticated && allowedRoles) {
           // Check if user has one of the allowed roles
-          const userRole = keycloakService.getUserRole();
+          const userRole = authService.getUserRole();
           setHasValidRole(userRole ? allowedRoles.includes(userRole) : false);
         } else if (authenticated) {
           // No role restriction, just authenticated
@@ -47,7 +47,7 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
 
     // Set up an interval to periodically check authentication
     const interval = setInterval(() => {
-      const authenticated = keycloakService.isAuthenticated();
+      const authenticated = authService.isAuthenticated();
       if (!authenticated) {
         setIsAuthenticated(false);
         setIsChecking(false);
@@ -76,9 +76,9 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
 
   // Authenticated but doesn't have required role - redirect to appropriate dashboard
   if (allowedRoles && !hasValidRole) {
-    const userRole = keycloakService.getUserRole();
+    const userRole = authService.getUserRole();
     if (userRole) {
-      const dashboardUrl = keycloakService.getDashboardUrl(userRole);
+      const dashboardUrl = authService.getDashboardUrl(userRole);
       return <Navigate to={dashboardUrl} replace />;
     }
     // Fallback to login if role is somehow missing

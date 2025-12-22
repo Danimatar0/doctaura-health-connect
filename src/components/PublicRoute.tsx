@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { keycloakService } from "@/services/keycloakService";
+import { authService } from "@/services/authService";
 
 interface PublicRouteProps {
   children: React.ReactNode;
@@ -18,7 +18,7 @@ const PublicRoute = ({ children, redirectIfAuthenticated = true }: PublicRoutePr
   useEffect(() => {
     const checkAuth = () => {
       try {
-        const authenticated = keycloakService.isAuthenticated();
+        const authenticated = authService.isAuthenticated();
         setIsAuthenticated(authenticated);
       } catch (error) {
         console.error("Auth check failed:", error);
@@ -45,9 +45,9 @@ const PublicRoute = ({ children, redirectIfAuthenticated = true }: PublicRoutePr
 
   // If authenticated and should redirect, go to appropriate dashboard
   if (isAuthenticated && redirectIfAuthenticated) {
-    const userRole = keycloakService.getUserRole();
+    const userRole = authService.getUserRole();
     if (userRole) {
-      const dashboardUrl = keycloakService.getDashboardUrl(userRole);
+      const dashboardUrl = authService.getDashboardUrl(userRole);
       return <Navigate to={dashboardUrl} replace />;
     }
   }

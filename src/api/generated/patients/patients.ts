@@ -47,7 +47,7 @@ export const getPostApiPatientsUrl = () => {
 
   
 
-  return `/api/patients`
+  return `/patients`
 }
 
 export const postApiPatients = async (patientAddRequestDto: PatientAddRequestDto, options?: RequestInit): Promise<PatientAddResponseDto> => {
@@ -112,7 +112,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   
 
-  return `/api/patients/appointments/summary`
+  return `/patients/appointments/summary`
 }
 
 export const postApiPatientsAppointmentsSummary = async (patientAppointmentsSummaryRequestDto: PatientAppointmentsSummaryRequestDto, options?: RequestInit): Promise<PatientAppointmentsSummaryResponseDto> => {
@@ -177,7 +177,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   
 
-  return `/api/patients/me`
+  return `/patients/me`
 }
 
 export const getApiPatientsMe = async ( options?: RequestInit): Promise<PatientDetailsDto> => {
@@ -197,7 +197,7 @@ export const getApiPatientsMe = async ( options?: RequestInit): Promise<PatientD
 
 export const getGetApiPatientsMeQueryKey = () => {
     return [
-    `/api/patients/me`
+    `/patients/me`
     ] as const;
     }
 
@@ -270,7 +270,7 @@ export const getPutApiPatientsMeUrl = () => {
 
   
 
-  return `/api/patients/me`
+  return `/patients/me`
 }
 
 export const putApiPatientsMe = async (patientEditRequestDto: PatientEditRequestDto, options?: RequestInit): Promise<PatientEditResponseDto> => {
@@ -335,7 +335,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   
 
-  return `/api/patients/me`
+  return `/patients/me`
 }
 
 export const deleteApiPatientsMe = async ( options?: RequestInit): Promise<void> => {

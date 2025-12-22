@@ -6,7 +6,6 @@
  */
 
 import { env } from "@/config/env";
-import { keycloakService } from "@/services/keycloakService";
 
 /**
  * HTTP request options
@@ -16,8 +15,6 @@ interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown;
   /** Custom timeout in milliseconds */
   timeout?: number;
-  /** Skip authentication header */
-  skipAuth?: boolean;
 }
 
 /**
@@ -36,14 +33,46 @@ export class ApiError extends Error {
 }
 
 /**
- * Get authentication headers
+ * Check if error is a timeout/abort error
  */
-const getAuthHeaders = (): Record<string, string> => {
-  const token = keycloakService.getAccessToken();
-  if (token) {
-    return { Authorization: `Bearer ${token}` };
+const isTimeoutError = (error: unknown): boolean => {
+  return (
+    error instanceof Error &&
+    (error.name === 'TimeoutError' ||
+      error.name === 'AbortError' ||
+      error.message.toLowerCase().includes('timeout') ||
+      error.message.toLowerCase().includes('aborted'))
+  );
+};
+
+/**
+ * Check if error is a network error
+ */
+const isNetworkError = (error: unknown): boolean => {
+  return (
+    error instanceof TypeError &&
+    (error.message.includes('fetch') || error.message.includes('network'))
+  );
+};
+
+/**
+ * Wrap fetch with better error handling
+ */
+const fetchWithErrorHandling = async (
+  url: string,
+  options: RequestInit
+): Promise<Response> => {
+  try {
+    return await fetch(url, options);
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      throw new ApiError(408, 'Request Timeout', 'The request took too long. Please check your connection and try again.');
+    }
+    if (isNetworkError(error)) {
+      throw new ApiError(0, 'Network Error', 'Unable to connect to the server. Please check your internet connection.');
+    }
+    throw error;
   }
-  return {};
 };
 
 /**
@@ -88,14 +117,14 @@ export const httpClient = {
    * Make a GET request
    */
   async get<T>(url: string, options: RequestOptions = {}): Promise<T> {
-    const { timeout = env.api.timeout, skipAuth = false, ...fetchOptions } = options;
+    const { timeout = env.api.timeout, ...fetchOptions } = options;
 
-    const response = await fetch(url, {
+    const response = await fetchWithErrorHandling(url, {
       ...fetchOptions,
       method: 'GET',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        ...(skipAuth ? {} : getAuthHeaders()),
         ...fetchOptions.headers,
       },
       signal: AbortSignal.timeout(timeout),
@@ -108,14 +137,14 @@ export const httpClient = {
    * Make a POST request
    */
   async post<T>(url: string, options: RequestOptions = {}): Promise<T> {
-    const { body, timeout = env.api.timeout, skipAuth = false, ...fetchOptions } = options;
+    const { body, timeout = env.api.timeout, ...fetchOptions } = options;
 
-    const response = await fetch(url, {
+    const response = await fetchWithErrorHandling(url, {
       ...fetchOptions,
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        ...(skipAuth ? {} : getAuthHeaders()),
         ...fetchOptions.headers,
       },
       body: body ? JSON.stringify(body) : undefined,
@@ -129,14 +158,14 @@ export const httpClient = {
    * Make a PUT request
    */
   async put<T>(url: string, options: RequestOptions = {}): Promise<T> {
-    const { body, timeout = env.api.timeout, skipAuth = false, ...fetchOptions } = options;
+    const { body, timeout = env.api.timeout, ...fetchOptions } = options;
 
-    const response = await fetch(url, {
+    const response = await fetchWithErrorHandling(url, {
       ...fetchOptions,
       method: 'PUT',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        ...(skipAuth ? {} : getAuthHeaders()),
         ...fetchOptions.headers,
       },
       body: body ? JSON.stringify(body) : undefined,
@@ -150,14 +179,14 @@ export const httpClient = {
    * Make a PATCH request
    */
   async patch<T>(url: string, options: RequestOptions = {}): Promise<T> {
-    const { body, timeout = env.api.timeout, skipAuth = false, ...fetchOptions } = options;
+    const { body, timeout = env.api.timeout, ...fetchOptions } = options;
 
-    const response = await fetch(url, {
+    const response = await fetchWithErrorHandling(url, {
       ...fetchOptions,
       method: 'PATCH',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        ...(skipAuth ? {} : getAuthHeaders()),
         ...fetchOptions.headers,
       },
       body: body ? JSON.stringify(body) : undefined,
@@ -171,14 +200,14 @@ export const httpClient = {
    * Make a DELETE request
    */
   async delete<T>(url: string, options: RequestOptions = {}): Promise<T> {
-    const { timeout = env.api.timeout, skipAuth = false, ...fetchOptions } = options;
+    const { timeout = env.api.timeout, ...fetchOptions } = options;
 
-    const response = await fetch(url, {
+    const response = await fetchWithErrorHandling(url, {
       ...fetchOptions,
       method: 'DELETE',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        ...(skipAuth ? {} : getAuthHeaders()),
         ...fetchOptions.headers,
       },
       signal: AbortSignal.timeout(timeout),
@@ -189,18 +218,21 @@ export const httpClient = {
 
   /**
    * Make a request with custom token (useful for registration callbacks)
+   * Note: This method still accepts a token for special cases where
+   * cookie-based auth is not applicable (e.g., email verification links)
    */
   async withToken<T>(
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     url: string,
     token: string,
-    options: Omit<RequestOptions, 'skipAuth'> = {}
+    options: RequestOptions = {}
   ): Promise<T> {
     const { body, timeout = env.api.timeout, ...fetchOptions } = options;
 
-    const response = await fetch(url, {
+    const response = await fetchWithErrorHandling(url, {
       ...fetchOptions,
       method,
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,

@@ -582,7 +582,7 @@ class KeycloakService implements IAuthService {
    */
   isAuthenticated(): boolean {
     const user = this.getCurrentUser();
-    return user !== null && this.isTokenValid(user.accessToken);
+    return user !== null;
   }
 
   /**
@@ -693,7 +693,7 @@ class KeycloakService implements IAuthService {
     // Extract custom attributes (check top-level first, then attributes object)
     const extractAttribute = (key: string): string | undefined => {
       // First check top-level (where mappers put values)
-      const topLevel = (userInfo as Record<string, unknown>)[key];
+      const topLevel = (userInfo as unknown as Record<string, unknown>)[key];
       if (topLevel !== undefined) {
         return String(topLevel);
       }

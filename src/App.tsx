@@ -4,14 +4,18 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { FeatureFlagsProvider } from "@/contexts/FeatureFlagsContext";
+import { EncryptionProvider } from "@/contexts/EncryptionContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import PublicRoute from "@/components/PublicRoute";
 import FeatureRoute from "@/components/FeatureRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import RoleSelection from "./pages/RoleSelection";
+import DoctorRegister from "./pages/register/DoctorRegister";
+import StaffRegister from "./pages/register/StaffRegister";
 import ForgotPassword from "./pages/ForgotPassword";
-import AuthCallback from "./pages/AuthCallback";
+import VerifyEmail from "./pages/VerifyEmail";
 import DoctorDirectory from "./pages/DoctorDirectory";
 import DoctorProfile from "./pages/DoctorProfile";
 import PharmacyLocator from "./pages/PharmacyLocator";
@@ -33,12 +37,13 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <FeatureFlagsProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-        <Routes>
+    <EncryptionProvider>
+      <FeatureFlagsProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+          <Routes>
           {/* Public Landing Page */}
           <Route path="/" element={<Index />} />
 
@@ -55,7 +60,31 @@ const App = () => (
             path="/register"
             element={
               <PublicRoute>
+                <RoleSelection />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/register/patient"
+            element={
+              <PublicRoute>
                 <Register />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/register/doctor"
+            element={
+              <PublicRoute>
+                <DoctorRegister />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/register/staff"
+            element={
+              <PublicRoute>
+                <StaffRegister />
               </PublicRoute>
             }
           />
@@ -67,7 +96,7 @@ const App = () => (
               </PublicRoute>
             }
           />
-          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
 
           {/* Public Doctor/Pharmacy Routes */}
           <Route path="/doctors" element={<DoctorDirectory />} />
@@ -203,12 +232,13 @@ const App = () => (
               </ProtectedRoute>
             }
           />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </FeatureFlagsProvider>
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </FeatureFlagsProvider>
+    </EncryptionProvider>
   </QueryClientProvider>
 );
 

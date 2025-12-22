@@ -18,9 +18,9 @@ export const API = {
    */
   Auth: {
     /** Patient registration endpoint */
-    PatientRegistration: `${BASE_URL}/api/patients`,
+    PatientRegistration: `${BASE_URL}/patients`,
     /** Doctor registration endpoint */
-    DoctorRegistration: `${BASE_URL}/api/doctors`,
+    DoctorRegistration: `${BASE_URL}/doctors`,
   },
 
   /**
@@ -28,17 +28,17 @@ export const API = {
    */
   Patients: {
     /** Base patients endpoint */
-    Base: `${BASE_URL}/api/patients`,
+    Base: `${BASE_URL}/patients`,
     /** Patient profile */
-    Profile: `${BASE_URL}/api/patients/profile`,
+    Profile: `${BASE_URL}/patients/profile`,
     /** Patient appointments */
-    Appointments: `${BASE_URL}/api/patients/appointments`,
+    Appointments: `${BASE_URL}/patients/appointments`,
     /** Patient prescriptions */
-    Prescriptions: `${BASE_URL}/api/patients/prescriptions`,
+    Prescriptions: `${BASE_URL}/patients/prescriptions`,
     /** Patient dashboard stats */
-    Stats: `${BASE_URL}/api/patients/stats`,
+    Stats: `${BASE_URL}/patients/stats`,
     /** Patient medical records */
-    MedicalRecords: `${BASE_URL}/api/patients/medical-records`,
+    MedicalRecords: `${BASE_URL}/patients/medical-records`,
   },
 
   /**
@@ -46,23 +46,23 @@ export const API = {
    */
   Doctors: {
     /** Base doctors endpoint */
-    Base: `${BASE_URL}/api/doctors`,
+    Base: `${BASE_URL}/doctors`,
     /** Doctor profile */
-    Profile: `${BASE_URL}/api/doctor/profile`,
+    Profile: `${BASE_URL}/doctor/profile`,
     /** Doctor appointments */
-    Appointments: `${BASE_URL}/api/doctor/appointments`,
+    Appointments: `${BASE_URL}/doctor/appointments`,
     /** Doctor dashboard stats */
-    Stats: `${BASE_URL}/api/doctor/stats`,
+    Stats: `${BASE_URL}/doctor/stats`,
     /** Doctor weekly schedule overview */
-    WeeklySchedule: `${BASE_URL}/api/doctor/weekly-schedule`,
+    WeeklySchedule: `${BASE_URL}/doctor/weekly-schedule`,
     /** Doctor clinics */
-    Clinics: `${BASE_URL}/api/doctor/clinics`,
+    Clinics: `${BASE_URL}/doctor/clinics`,
     /** Doctor schedule settings */
-    ScheduleSettings: `${BASE_URL}/api/doctor/schedule-settings`,
+    ScheduleSettings: `${BASE_URL}/doctor/schedule-settings`,
     /** Doctor blocked time slots */
-    BlockedTime: `${BASE_URL}/api/doctor/blocked-time`,
+    BlockedTime: `${BASE_URL}/doctor/blocked-time`,
     /** Doctor prescriptions */
-    Prescriptions: `${BASE_URL}/api/doctor/prescriptions`,
+    Prescriptions: `${BASE_URL}/doctor/prescriptions`,
   },
 
   /**
@@ -70,11 +70,11 @@ export const API = {
    */
   Pharmacies: {
     /** Base pharmacies endpoint */
-    Base: `${BASE_URL}/api/pharmacies`,
+    Base: `${BASE_URL}/pharmacies`,
     /** Search pharmacies */
-    Search: `${BASE_URL}/api/pharmacies/search`,
+    Search: `${BASE_URL}/pharmacies/search`,
     /** Nearby pharmacies */
-    Nearby: `${BASE_URL}/api/pharmacies/nearby`,
+    Nearby: `${BASE_URL}/pharmacies/nearby`,
   },
 
   /**
@@ -82,15 +82,15 @@ export const API = {
    */
   Appointments: {
     /** Base appointments endpoint */
-    Base: `${BASE_URL}/api/appointments`,
+    Base: `${BASE_URL}/appointments`,
     /** Book new appointment */
-    Book: `${BASE_URL}/api/appointments/book`,
+    Book: `${BASE_URL}/appointments/book`,
     /** Cancel appointment */
-    Cancel: (id: string) => `${BASE_URL}/api/appointments/${id}/cancel`,
+    Cancel: (id: string) => `${BASE_URL}/appointments/${id}/cancel`,
     /** Reschedule appointment */
-    Reschedule: (id: string) => `${BASE_URL}/api/appointments/${id}/reschedule`,
+    Reschedule: (id: string) => `${BASE_URL}/appointments/${id}/reschedule`,
     /** Get appointment by ID */
-    ById: (id: string) => `${BASE_URL}/api/appointments/${id}`,
+    ById: (id: string) => `${BASE_URL}/appointments/${id}`,
   },
 
   /**
@@ -98,11 +98,11 @@ export const API = {
    */
   MedicalRecords: {
     /** Base medical records endpoint */
-    Base: `${BASE_URL}/api/medical-records`,
+    Base: `${BASE_URL}/medical-records`,
     /** Get record by ID */
-    ById: (id: string) => `${BASE_URL}/api/medical-records/${id}`,
+    ById: (id: string) => `${BASE_URL}/medical-records/${id}`,
     /** Upload attachment */
-    Upload: `${BASE_URL}/api/medical-records/upload`,
+    Upload: `${BASE_URL}/medical-records/upload`,
   },
 
   /**
@@ -110,11 +110,11 @@ export const API = {
    */
   Locations: {
     /** Get all governorates */
-    Governorates: `${BASE_URL}/api/locations/governorates`,
+    Governorates: `${BASE_URL}/locations/governorates`,
     /** Get districts by governorate */
-    Districts: (governorateId: number) => `${BASE_URL}/api/locations/governorates/${governorateId}/districts`,
+    Districts: (governorateId: number) => `${BASE_URL}/locations/governorates/${governorateId}/districts`,
     /** Get localities by district */
-    Localities: (districtId: number) => `${BASE_URL}/api/locations/districts/${districtId}/localities`,
+    Localities: (districtId: number) => `${BASE_URL}/locations/districts/${districtId}/localities`,
   },
 } as const;
 

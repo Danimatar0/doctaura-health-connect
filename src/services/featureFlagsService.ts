@@ -8,24 +8,70 @@
  * - Support for multiple cache keys (extensible for future caching needs)
  */
 
+import { useState, useEffect, useCallback } from 'react';
+
 // Internal feature flags (used throughout the app)
 export interface FeatureFlags {
+  // Core features
   prescriptions: boolean;
   medicalRecords: boolean;
   telemedicine: boolean;
   pharmacyFinder: boolean;
   medicineFinder: boolean;
   appointmentReminders: boolean;
+
+  // Medical Records Sub-Features (Health Profile)
+  healthProfileSection: boolean;
+  allergiesSection: boolean;
+  chronicConditionsSection: boolean;
+  medicationsSection: boolean;
+
+  // Health Tracking
+  healthTrackingSection: boolean;
+  heightWeightTracking: boolean;
+  bloodPressureTracking: boolean;
+  bloodSugarTracking: boolean;
+
+  // Medical History
+  medicalHistorySection: boolean;
+  familyHistorySection: boolean;
+  vaccinationRecords: boolean;
+
+  // Actions
+  recordsExportPdf: boolean;
+  recordsSharing: boolean;
 }
 
 // API response format (from backend)
 export interface ApiFeatureFlags {
+  // Core features
   prescriptionsEnabled?: boolean;
   medicalRecordsEnabled?: boolean;
   telemedicineEnabled?: boolean;
   pharmacyFinderEnabled?: boolean;
   medicineFinderEnabled?: boolean;
   appointmentRemindersEnabled?: boolean;
+
+  // Medical Records Sub-Features (Health Profile)
+  healthProfileSectionEnabled?: boolean;
+  allergiesSectionEnabled?: boolean;
+  chronicConditionsSectionEnabled?: boolean;
+  medicationsSectionEnabled?: boolean;
+
+  // Health Tracking
+  healthTrackingSectionEnabled?: boolean;
+  heightWeightTrackingEnabled?: boolean;
+  bloodPressureTrackingEnabled?: boolean;
+  bloodSugarTrackingEnabled?: boolean;
+
+  // Medical History
+  medicalHistorySectionEnabled?: boolean;
+  familyHistorySectionEnabled?: boolean;
+  vaccinationRecordsEnabled?: boolean;
+
+  // Actions
+  recordsExportPdfEnabled?: boolean;
+  recordsSharingEnabled?: boolean;
 }
 
 interface CacheEntry<T> {
@@ -47,12 +93,34 @@ const DEFAULT_CACHE_CONFIG: CacheConfig = {
 
 // Default feature flags (all enabled by default)
 const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
+  // Core features
   prescriptions: true,
   medicalRecords: true,
   telemedicine: true,
   pharmacyFinder: true,
   medicineFinder: true,
   appointmentReminders: true,
+
+  // Medical Records Sub-Features (Health Profile)
+  healthProfileSection: true,
+  allergiesSection: true,
+  chronicConditionsSection: true,
+  medicationsSection: true,
+
+  // Health Tracking
+  healthTrackingSection: true,
+  heightWeightTracking: true,
+  bloodPressureTracking: true,
+  bloodSugarTracking: true,
+
+  // Medical History
+  medicalHistorySection: true,
+  familyHistorySection: true,
+  vaccinationRecords: true,
+
+  // Actions
+  recordsExportPdf: true,
+  recordsSharing: true,
 };
 
 class CacheService {
@@ -188,7 +256,7 @@ export const featureFlagsCache = {
    * Merge API flags with defaults, mapping from API format to internal format
    */
   mergeWithDefaults(apiFlags: ApiFeatureFlags | undefined | null): FeatureFlags {
-    console.log('[FeatureFlagsCache] mergeWithDefaults input:', JSON.stringify(apiFlags));
+    // console.log('[FeatureFlagsCache] mergeWithDefaults input:', JSON.stringify(apiFlags));
 
     if (!apiFlags) {
       console.log('[FeatureFlagsCache] No API flags, returning defaults');
@@ -197,15 +265,37 @@ export const featureFlagsCache = {
 
     // Map from API property names (xxxEnabled) to internal names (xxx)
     const result: FeatureFlags = {
+      // Core features
       prescriptions: apiFlags.prescriptionsEnabled ?? DEFAULT_FEATURE_FLAGS.prescriptions,
       medicalRecords: apiFlags.medicalRecordsEnabled ?? DEFAULT_FEATURE_FLAGS.medicalRecords,
       telemedicine: apiFlags.telemedicineEnabled ?? DEFAULT_FEATURE_FLAGS.telemedicine,
       pharmacyFinder: apiFlags.pharmacyFinderEnabled ?? DEFAULT_FEATURE_FLAGS.pharmacyFinder,
       medicineFinder: apiFlags.medicineFinderEnabled ?? DEFAULT_FEATURE_FLAGS.medicineFinder,
       appointmentReminders: apiFlags.appointmentRemindersEnabled ?? DEFAULT_FEATURE_FLAGS.appointmentReminders,
+
+      // Medical Records Sub-Features (Health Profile)
+      healthProfileSection: apiFlags.healthProfileSectionEnabled ?? DEFAULT_FEATURE_FLAGS.healthProfileSection,
+      allergiesSection: apiFlags.allergiesSectionEnabled ?? DEFAULT_FEATURE_FLAGS.allergiesSection,
+      chronicConditionsSection: apiFlags.chronicConditionsSectionEnabled ?? DEFAULT_FEATURE_FLAGS.chronicConditionsSection,
+      medicationsSection: apiFlags.medicationsSectionEnabled ?? DEFAULT_FEATURE_FLAGS.medicationsSection,
+
+      // Health Tracking
+      healthTrackingSection: apiFlags.healthTrackingSectionEnabled ?? DEFAULT_FEATURE_FLAGS.healthTrackingSection,
+      heightWeightTracking: apiFlags.heightWeightTrackingEnabled ?? DEFAULT_FEATURE_FLAGS.heightWeightTracking,
+      bloodPressureTracking: apiFlags.bloodPressureTrackingEnabled ?? DEFAULT_FEATURE_FLAGS.bloodPressureTracking,
+      bloodSugarTracking: apiFlags.bloodSugarTrackingEnabled ?? DEFAULT_FEATURE_FLAGS.bloodSugarTracking,
+
+      // Medical History
+      medicalHistorySection: apiFlags.medicalHistorySectionEnabled ?? DEFAULT_FEATURE_FLAGS.medicalHistorySection,
+      familyHistorySection: apiFlags.familyHistorySectionEnabled ?? DEFAULT_FEATURE_FLAGS.familyHistorySection,
+      vaccinationRecords: apiFlags.vaccinationRecordsEnabled ?? DEFAULT_FEATURE_FLAGS.vaccinationRecords,
+
+      // Actions
+      recordsExportPdf: apiFlags.recordsExportPdfEnabled ?? DEFAULT_FEATURE_FLAGS.recordsExportPdf,
+      recordsSharing: apiFlags.recordsSharingEnabled ?? DEFAULT_FEATURE_FLAGS.recordsSharing,
     };
 
-    console.log('[FeatureFlagsCache] Merged result:', JSON.stringify(result));
+    // console.log('[FeatureFlagsCache] Merged result:', JSON.stringify(result));
     return result;
   },
 
@@ -239,3 +329,71 @@ export const globalCache = {
 };
 
 export default featureFlagsCache;
+
+// ============================================================================
+// React Hook for Feature Flags
+// ============================================================================
+
+interface UseFeatureFlagsReturn {
+  flags: FeatureFlags;
+  isLoading: boolean;
+  error: Error | null;
+  refresh: () => Promise<void>;
+}
+
+/**
+ * React hook for accessing feature flags with automatic caching.
+ * Returns default flags immediately while loading from cache/API.
+ */
+export function useFeatureFlags(): UseFeatureFlagsReturn {
+  const [flags, setFlags] = useState<FeatureFlags>(() => {
+    // Try to get cached flags first, fallback to defaults
+    return featureFlagsCache.get() ?? featureFlagsCache.getDefaults();
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Check if we have valid cached flags
+      if (featureFlagsCache.isValid()) {
+        const cachedFlags = featureFlagsCache.get();
+        if (cachedFlags) {
+          setFlags(cachedFlags);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Return stale data while loading if available
+      const staleFlags = featureFlagsCache.getStale();
+      if (staleFlags) {
+        setFlags(staleFlags);
+      }
+
+      // For now, just use defaults since API endpoint may not exist yet
+      // In production, this would fetch from API
+      const newFlags = featureFlagsCache.getDefaults();
+      featureFlagsCache.set(newFlags);
+      setFlags(newFlags);
+    } catch (err) {
+      console.error('[useFeatureFlags] Error fetching flags:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch feature flags'));
+      // Keep using cached/default flags on error
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Only refresh if cache is not valid
+    if (!featureFlagsCache.isValid()) {
+      refresh();
+    }
+  }, [refresh]);
+
+  return { flags, isLoading, error, refresh };
+}

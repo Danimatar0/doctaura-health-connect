@@ -16,8 +16,8 @@ import { mockMedicalRecords } from "@/data/mockMedicalRecords";
 
 // API endpoints
 const API_ENDPOINTS = {
-  records: `${env.api.baseUrl}/api/patient/medical-records`,
-  recordById: (id: string) => `${env.api.baseUrl}/api/patient/medical-records/${id}`,
+  records: `${env.api.baseUrl}/patient/medical-records`,
+  recordById: (id: string) => `${env.api.baseUrl}/patient/medical-records/${id}`,
 };
 
 // Mock data functions
@@ -34,8 +34,8 @@ const getMockMedicalRecordById = async (id: string): Promise<MedicalRecord | und
 // API data functions
 const getApiMedicalRecords = async (): Promise<MedicalRecord[]> => {
   const response = await fetch(API_ENDPOINTS.records, {
+    credentials: 'include',
     headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token')}`,
       'Content-Type': 'application/json',
     },
   });
@@ -49,8 +49,8 @@ const getApiMedicalRecords = async (): Promise<MedicalRecord[]> => {
 
 const getApiMedicalRecordById = async (id: string): Promise<MedicalRecord | undefined> => {
   const response = await fetch(API_ENDPOINTS.recordById(id), {
+    credentials: 'include',
     headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token')}`,
       'Content-Type': 'application/json',
     },
   });

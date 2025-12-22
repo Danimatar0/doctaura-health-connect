@@ -40,6 +40,15 @@ export const env = {
     // Toggle between mock data and real API calls
     useMockData: import.meta.env.VITE_USE_MOCK_DATA !== "false", // Default to true for development
   },
+
+  // Security Configuration
+  security: {
+    // Enable payload encryption for sensitive API requests
+    // When enabled, request/response payloads are encrypted using ECDH-derived keys
+    enablePayloadEncryption: import.meta.env.VITE_ENABLE_PAYLOAD_ENCRYPTION === "true",
+    derivationSalt: import.meta.env.VITE_KEY_DERIVATION_SALT,
+    signingContext: import.meta.env.VITE_KEY_SIGNING_CTX || "doctaura:v1:signing",
+  },
 } as const;
 
 // Type-safe environment checker
