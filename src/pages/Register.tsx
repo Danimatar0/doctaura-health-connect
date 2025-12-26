@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -47,19 +47,42 @@ import {
 import { authService, PatientRegistrationRequest } from "@/services/authService";
 import {
   locationService,
-  Country,
   Location,
 } from "@/services/locationService";
 import { Gender } from "@/types/generated/gender";
 import { getAuthErrorMessage } from "@/types/auth.types";
 import { cn } from "@/lib/utils";
+import { VALIDATION_PATTERNS } from "@/lib/validators";
+import { useOnboardingConfig } from "@/hooks/useOnboardingConfig";
 
-// Gender options mapping
-const GENDER_OPTIONS = [
-  { value: Gender.NUMBER_0, label: "Male" },
-  { value: Gender.NUMBER_1, label: "Female" },
-  { value: Gender.NUMBER_2, label: "Other" },
+// Default fallback options (used when config is loading)
+const DEFAULT_GENDER_OPTIONS = [
+  { id: 0, code: "male", name: "Male" },
+  { id: 1, code: "female", name: "Female" },
+  { id: 2, code: "other", name: "Other" },
 ] as const;
+
+const DEFAULT_BLOOD_TYPES = [
+  { id: 1, code: "A+", name: "A+" },
+  { id: 2, code: "A-", name: "A-" },
+  { id: 3, code: "B+", name: "B+" },
+  { id: 4, code: "B-", name: "B-" },
+  { id: 5, code: "AB+", name: "AB+" },
+  { id: 6, code: "AB-", name: "AB-" },
+  { id: 7, code: "O+", name: "O+" },
+  { id: 8, code: "O-", name: "O-" },
+] as const;
+
+// Default validation rules (used when config is loading)
+const DEFAULT_RULES = {
+  minAge: 0,
+  maxAge: 120,
+  phoneMinLength: 8,
+  phoneMaxLength: 15,
+  requireEmail: true,
+  requirePhone: true,
+  requireEmergencyContact: false,
+} as const;
 
 // Form validation schemas for each step
 const step1Schema = z.object({
@@ -67,12 +90,12 @@ const step1Schema = z.object({
     .string()
     .min(2, "First name must be at least 2 characters")
     .max(50, "First name must be less than 50 characters")
-    .regex(/^[a-zA-Z\s]+$/, "First name can only contain letters"),
+    .regex(VALIDATION_PATTERNS.lettersOnly, "First name can only contain letters"),
   lastName: z
     .string()
     .min(2, "Last name must be at least 2 characters")
     .max(50, "Last name must be less than 50 characters")
-    .regex(/^[a-zA-Z\s]+$/, "Last name can only contain letters"),
+    .regex(VALIDATION_PATTERNS.lettersOnly, "Last name can only contain letters"),
   email: z
     .string()
     .min(1, "Email is required")
@@ -89,25 +112,18 @@ const step1Schema = z.object({
   path: ["confirmPassword"],
 });
 
+// Base step2 schema - dynamic validation happens at runtime using config rules
 const step2Schema = z.object({
   phone: z
     .string()
     .min(1, "Phone number is required")
-    .regex(/^\+?[1-9]\d{7,14}$/, "Please enter a valid phone number"),
+    .regex(/^\+?[1-9]\d{6,16}$/, "Please enter a valid phone number"),
   gender: z.number({
     required_error: "Please select your gender",
-  }).refine((val) => [0, 1, 2].includes(val), {
-    message: "Please select a valid gender",
   }),
   dateOfBirth: z
     .string()
-    .min(1, "Date of birth is required")
-    .refine((date) => {
-      const birthDate = new Date(date);
-      const today = new Date();
-      const age = today.getFullYear() - birthDate.getFullYear();
-      return age >= 13 && age <= 120;
-    }, "You must be at least 13 years old"),
+    .min(1, "Date of birth is required"),
   countryId: z.number().min(1, "Please select your country"),
   governorateId: z.number().optional(),
   districtId: z.number().optional(),
@@ -115,13 +131,13 @@ const step2Schema = z.object({
 });
 
 const step3Schema = z.object({
-  bloodType: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
+  bloodType: z.string().optional(),
   allergies: z.string().max(500, "Allergies must be less than 500 characters").optional(),
   chronicConditions: z.string().max(1000, "Chronic conditions must be less than 1000 characters").optional(),
   emergencyContactName: z.string().max(100, "Name must be less than 100 characters").optional(),
   emergencyContactPhone: z
     .string()
-    .regex(/^(\+?[1-9]\d{7,14})?$/, "Please enter a valid phone number")
+    .regex(/^(\+?[1-9]\d{6,16})?$/, "Please enter a valid phone number")
     .optional()
     .or(z.literal("")),
 });
@@ -137,8 +153,6 @@ const STEPS = [
   { id: 3, title: "Medical", description: "Health information", icon: Stethoscope },
 ];
 
-const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
-
 const Register = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
@@ -150,13 +164,34 @@ const Register = () => {
   // Password strength calculation
   const [passwordStrength, setPasswordStrength] = useState(0);
 
-  // Location data states
-  const [countries, setCountries] = useState<Country[]>([]);
-  const [governorates, setGovernorates] = useState<Location[]>([]);
+  // Onboarding config (countries, genders, blood types, validation rules)
+  const { data: onboardingConfig, loading: configLoading } = useOnboardingConfig();
+
+  // Derived config values with fallbacks
+  const countries = useMemo(
+    () => onboardingConfig?.reference.countries ?? [],
+    [onboardingConfig]
+  );
+  const genderOptions = useMemo(
+    () => onboardingConfig?.reference.gender ?? DEFAULT_GENDER_OPTIONS,
+    [onboardingConfig]
+  );
+  const bloodTypeOptions = useMemo(
+    () => onboardingConfig?.reference.bloodTypes ?? DEFAULT_BLOOD_TYPES,
+    [onboardingConfig]
+  );
+  const rules = useMemo(
+    () => onboardingConfig?.rules ?? DEFAULT_RULES,
+    [onboardingConfig]
+  );
+  const governorates = useMemo(
+    () => onboardingConfig?.reference.governorates ?? [],
+    [onboardingConfig]
+  );
+
+  // Districts and localities loaded dynamically based on selection
   const [districts, setDistricts] = useState<Location[]>([]);
   const [localities, setLocalities] = useState<Location[]>([]);
-  const [loadingCountries, setLoadingCountries] = useState(true);
-  const [loadingGovernorates, setLoadingGovernorates] = useState(false);
   const [loadingDistricts, setLoadingDistricts] = useState(false);
   const [loadingLocalities, setLoadingLocalities] = useState(false);
 
@@ -198,29 +233,7 @@ const Register = () => {
   const watchGovernorateId = watch("governorateId");
   const watchDistrictId = watch("districtId");
 
-  // Load countries and governorates once on mount
-  useEffect(() => {
-    const loadInitialData = async () => {
-      try {
-        setLoadingCountries(true);
-        setLoadingGovernorates(true);
-
-        const [countriesData, governoratesData] = await Promise.all([
-          locationService.getCountries(),
-          locationService.getGovernorates(),
-        ]);
-
-        setCountries(countriesData);
-        setGovernorates(governoratesData);
-      } catch (err) {
-        console.error("Failed to load location data:", err);
-      } finally {
-        setLoadingCountries(false);
-        setLoadingGovernorates(false);
-      }
-    };
-    loadInitialData();
-  }, []);
+  // All reference data comes from cached onboardingConfig - no additional API calls needed
 
   // Cache for districts and localities to avoid re-fetching
   const districtsCache = useRef<Record<number, Location[]>>({});
@@ -330,7 +343,45 @@ const Register = () => {
         break;
     }
 
-    return await trigger(fieldsToValidate);
+    const isValid = await trigger(fieldsToValidate);
+
+    // Additional runtime validation using config rules (step 2)
+    if (currentStep === 2 && isValid) {
+      const formValues = watch();
+
+      // Validate phone length against config rules
+      const phoneDigits = formValues.phone?.replace(/\D/g, "") || "";
+      if (phoneDigits.length < rules.phoneMinLength) {
+        setError(`Phone number must be at least ${rules.phoneMinLength} digits`);
+        return false;
+      }
+      if (phoneDigits.length > rules.phoneMaxLength) {
+        setError(`Phone number must be at most ${rules.phoneMaxLength} digits`);
+        return false;
+      }
+
+      // Validate age against config rules
+      if (formValues.dateOfBirth) {
+        const birthDate = new Date(formValues.dateOfBirth);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+
+        if (age < rules.minAge) {
+          setError(`You must be at least ${rules.minAge} years old`);
+          return false;
+        }
+        if (age > rules.maxAge) {
+          setError(`Age cannot exceed ${rules.maxAge} years`);
+          return false;
+        }
+      }
+    }
+
+    return isValid;
   };
 
   const handleNext = async () => {
@@ -547,7 +598,7 @@ const Register = () => {
                           {/* Name Fields */}
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label htmlFor="firstName">First Name</Label>
+                              <Label htmlFor="firstName">First Name <span className="text-destructive">*</span></Label>
                               <div className="relative group">
                                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                                 <Input
@@ -566,7 +617,7 @@ const Register = () => {
                             </div>
 
                             <div className="space-y-2">
-                              <Label htmlFor="lastName">Last Name</Label>
+                              <Label htmlFor="lastName">Last Name <span className="text-destructive">*</span></Label>
                               <div className="relative group">
                                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                                 <Input
@@ -587,7 +638,7 @@ const Register = () => {
 
                           {/* Email Field */}
                           <div className="space-y-2">
-                            <Label htmlFor="email">Email Address</Label>
+                            <Label htmlFor="email">Email Address <span className="text-destructive">*</span></Label>
                             <div className="relative group">
                               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                               <Input
@@ -611,7 +662,7 @@ const Register = () => {
 
                           {/* Password Field */}
                           <div className="space-y-2">
-                            <Label htmlFor="password">Password</Label>
+                            <Label htmlFor="password">Password <span className="text-destructive">*</span></Label>
                             <div className="relative group">
                               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                               <Input
@@ -663,7 +714,7 @@ const Register = () => {
 
                           {/* Confirm Password Field */}
                           <div className="space-y-2">
-                            <Label htmlFor="confirmPassword">Confirm Password</Label>
+                            <Label htmlFor="confirmPassword">Confirm Password <span className="text-destructive">*</span></Label>
                             <div className="relative group">
                               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                               <Input
@@ -696,7 +747,7 @@ const Register = () => {
                         <div className="space-y-5 animate-in fade-in-0 slide-in-from-right-4">
                           {/* Phone Field */}
                           <div className="space-y-2">
-                            <Label htmlFor="phone">Phone Number</Label>
+                            <Label htmlFor="phone">Phone Number <span className="text-destructive">*</span></Label>
                             <div className="relative group">
                               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                               <Input
@@ -719,14 +770,14 @@ const Register = () => {
                           <div className="grid grid-cols-2 gap-4">
                             {/* Gender Field */}
                             <div className="space-y-2">
-                              <Label>Gender</Label>
+                              <Label>Gender <span className="text-destructive">*</span></Label>
                               <Controller
                                 name="gender"
                                 control={control}
                                 render={({ field }) => (
                                   <Select
                                     onValueChange={(value) => field.onChange(parseInt(value))}
-                                    value={field.value?.toString()}
+                                    value={field.value !== undefined ? field.value.toString() : ""}
                                   >
                                     <SelectTrigger className={cn(
                                       "h-12 bg-muted/30",
@@ -735,9 +786,9 @@ const Register = () => {
                                       <SelectValue placeholder="Select gender" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {GENDER_OPTIONS.map((option) => (
-                                        <SelectItem key={option.value} value={option.value.toString()}>
-                                          {option.label}
+                                      {genderOptions.map((option) => (
+                                        <SelectItem key={option.code} value={option.id.toString()}>
+                                          {option.name}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
@@ -751,7 +802,7 @@ const Register = () => {
 
                             {/* Date of Birth Field */}
                             <div className="space-y-2">
-                              <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                              <Label htmlFor="dateOfBirth">Date of Birth <span className="text-destructive">*</span></Label>
                               <div className="relative group">
                                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                                 <Input
@@ -790,18 +841,18 @@ const Register = () => {
                                 render={({ field }) => (
                                   <Select
                                     onValueChange={(value) => field.onChange(parseInt(value))}
-                                    value={field.value?.toString()}
-                                    disabled={loadingCountries}
+                                    value={field.value !== undefined ? field.value.toString() : ""}
+                                    disabled={configLoading && countries.length === 0}
                                   >
                                     <SelectTrigger className={cn(
                                       "h-12 bg-muted/30",
                                       errors.countryId && "border-destructive"
                                     )}>
-                                      <SelectValue placeholder={loadingCountries ? "Loading countries..." : "Select country"} />
+                                      <SelectValue placeholder={configLoading && countries.length === 0 ? "Loading countries..." : "Select country"} />
                                     </SelectTrigger>
                                     <SelectContent>
                                       {countries.map((country) => (
-                                        <SelectItem key={country.id} value={country.id.toString()}>
+                                        <SelectItem key={country.code} value={country.id.toString()}>
                                           {country.name}
                                         </SelectItem>
                                       ))}
@@ -827,20 +878,20 @@ const Register = () => {
                                   <Select
                                     onValueChange={(value) => handleGovernorateChange(value ? parseInt(value) : undefined)}
                                     value={field.value?.toString() || ""}
-                                    disabled={!watchCountryId || loadingGovernorates}
+                                    disabled={!watchCountryId || (configLoading && governorates.length === 0)}
                                   >
                                     <SelectTrigger className="h-12 bg-muted/30">
                                       <SelectValue placeholder={
                                         !watchCountryId
                                           ? "Select country first"
-                                          : loadingGovernorates
+                                          : configLoading && governorates.length === 0
                                             ? "Loading..."
                                             : "Select governorate"
                                       } />
                                     </SelectTrigger>
                                     <SelectContent>
                                       {governorates.map((gov) => (
-                                        <SelectItem key={gov.id} value={gov.id.toString()}>
+                                        <SelectItem key={gov.code} value={gov.id.toString()}>
                                           {gov.name}
                                         </SelectItem>
                                       ))}
@@ -957,8 +1008,10 @@ const Register = () => {
                                     <SelectValue placeholder="Select your blood type" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    {BLOOD_TYPES.map((type) => (
-                                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                                    {bloodTypeOptions.map((type) => (
+                                      <SelectItem key={type.code} value={type.code}>
+                                        {type.name}
+                                      </SelectItem>
                                     ))}
                                   </SelectContent>
                                 </Select>

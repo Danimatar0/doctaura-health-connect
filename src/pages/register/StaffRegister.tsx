@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -38,6 +38,7 @@ import {
   Stethoscope,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { VALIDATION_PATTERNS } from "@/lib/validators";
 import { getAuthErrorMessage } from "@/types/auth.types";
 import { staffRegistrationService } from "@/services/staffRegistrationService";
 import {
@@ -46,6 +47,14 @@ import {
   STAFF_ROLES,
   StaffRole,
 } from "@/types/registration.types";
+import { useOnboardingConfig } from "@/hooks/useOnboardingConfig";
+
+// Default fallback for genders (used when config is loading)
+const DEFAULT_GENDER_OPTIONS = [
+  { id: 0, code: "male", name: "Male" },
+  { id: 1, code: "female", name: "Female" },
+  { id: 2, code: "other", name: "Other" },
+] as const;
 
 // ============================================================================
 // Form Validation Schemas
@@ -77,12 +86,12 @@ const step3Schema = z.object({
     .string()
     .min(2, "First name must be at least 2 characters")
     .max(50, "First name cannot exceed 50 characters")
-    .regex(/^[a-zA-Z\s]+$/, "First name can only contain letters"),
+    .regex(VALIDATION_PATTERNS.lettersOnly, "First name can only contain letters"),
   lastName: z
     .string()
     .min(2, "Last name must be at least 2 characters")
     .max(50, "Last name cannot exceed 50 characters")
-    .regex(/^[a-zA-Z\s]+$/, "Last name can only contain letters"),
+    .regex(VALIDATION_PATTERNS.lettersOnly, "Last name can only contain letters"),
   phone: z
     .string()
     .min(1, "Phone number is required")
@@ -129,6 +138,15 @@ const StaffRegister = () => {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Onboarding config (genders from cached config)
+  const { data: onboardingConfig } = useOnboardingConfig();
+
+  // Derived config values with fallbacks
+  const genderOptions = useMemo(
+    () => onboardingConfig?.reference.gender ?? DEFAULT_GENDER_OPTIONS,
+    [onboardingConfig]
+  );
 
   // Invitation code validation state
   const [validatedEntity, setValidatedEntity] = useState<InvitationCodeValidation | null>(null);
@@ -301,7 +319,7 @@ const StaffRegister = () => {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="invitationCode">Invitation Code</Label>
+        <Label htmlFor="invitationCode">Invitation Code <span className="text-destructive">*</span></Label>
         <div className="relative">
           <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -382,7 +400,7 @@ const StaffRegister = () => {
   const renderStep2 = () => (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="email">Email Address</Label>
+        <Label htmlFor="email">Email Address <span className="text-destructive">*</span></Label>
         <div className="relative">
           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -399,7 +417,7 @@ const StaffRegister = () => {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">Password <span className="text-destructive">*</span></Label>
         <div className="relative">
           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -443,7 +461,7 @@ const StaffRegister = () => {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="confirmPassword">Confirm Password</Label>
+        <Label htmlFor="confirmPassword">Confirm Password <span className="text-destructive">*</span></Label>
         <div className="relative">
           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -473,7 +491,7 @@ const StaffRegister = () => {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="firstName">First Name</Label>
+          <Label htmlFor="firstName">First Name <span className="text-destructive">*</span></Label>
           <div className="relative">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -488,7 +506,7 @@ const StaffRegister = () => {
           )}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="lastName">Last Name</Label>
+          <Label htmlFor="lastName">Last Name <span className="text-destructive">*</span></Label>
           <div className="relative">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -505,7 +523,7 @@ const StaffRegister = () => {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="phone">Phone Number</Label>
+        <Label htmlFor="phone">Phone Number <span className="text-destructive">*</span></Label>
         <div className="relative">
           <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -522,22 +540,24 @@ const StaffRegister = () => {
       </div>
 
       <div className="space-y-2">
-        <Label>Gender</Label>
+        <Label>Gender <span className="text-destructive">*</span></Label>
         <Controller
           name="gender"
           control={control}
           render={({ field }) => (
             <Select
-              value={field.value?.toString()}
+              value={field.value !== undefined ? field.value.toString() : ""}
               onValueChange={(val) => field.onChange(parseInt(val))}
             >
               <SelectTrigger className={errors.gender ? "border-destructive" : ""}>
                 <SelectValue placeholder="Select gender" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="0">Male</SelectItem>
-                <SelectItem value="1">Female</SelectItem>
-                <SelectItem value="2">Other</SelectItem>
+                {genderOptions.map((option) => (
+                  <SelectItem key={option.code} value={option.id.toString()}>
+                    {option.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           )}
@@ -553,7 +573,7 @@ const StaffRegister = () => {
   const renderStep4 = () => (
     <div className="space-y-6">
       <div className="space-y-2">
-        <Label>Your Role</Label>
+        <Label>Your Role <span className="text-destructive">*</span></Label>
         <Controller
           name="staffRole"
           control={control}

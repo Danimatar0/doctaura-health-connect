@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { keycloakService } from "@/services/keycloakService";
-import { locationService, Country, Location } from "@/services/locationService";
+import { locationService, Location } from "@/services/locationService";
+import { useOnboardingConfig } from "@/hooks/useOnboardingConfig";
 import { AuthUser, ProfileUpdateData } from "@/types/auth.types";
 import type { PatientDetailsDto } from "@/types/generated";
 import { Loader2 } from "lucide-react";
@@ -42,9 +43,16 @@ const EditProfileDialog = ({
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  // Location dropdown states
-  const [countries, setCountries] = useState<Country[]>([]);
-  const [governorates, setGovernorates] = useState<Location[]>([]);
+  // Use cached onboarding config for countries and governorates
+  const { data: configData } = useOnboardingConfig();
+
+  // Derive reference data from cached config
+  const countries = useMemo(() => configData?.reference?.countries || [], [configData]);
+  const governorates = useMemo(() => configData?.reference?.governorates || [], [configData]);
+  const genderOptions = useMemo(() => configData?.reference?.gender || [], [configData]);
+  const bloodTypeOptions = useMemo(() => configData?.reference?.bloodTypes || [], [configData]);
+
+  // Location dropdown states (districts and localities still need API calls)
   const [districts, setDistricts] = useState<Location[]>([]);
   const [localities, setLocalities] = useState<Location[]>([]);
   const [loadingLocations, setLoadingLocations] = useState(false);
@@ -68,38 +76,6 @@ const EditProfileDialog = ({
     medicalCertification: user.medicalCertification || "",
   });
   const [errors, setErrors] = useState<Partial<Record<keyof ProfileUpdateData, string>>>({});
-
-  // Load countries on mount
-  useEffect(() => {
-    const loadCountries = async () => {
-      try {
-        const data = await locationService.getCountries();
-        setCountries(data);
-      } catch (e) {
-        console.error("Failed to load countries:", e);
-      }
-    };
-
-    if (open) {
-      loadCountries();
-    }
-  }, [open]);
-
-  // Load governorates on mount (they're independent)
-  useEffect(() => {
-    const loadGovernorates = async () => {
-      try {
-        const data = await locationService.getGovernorates();
-        setGovernorates(data);
-      } catch (e) {
-        console.error("Failed to load governorates:", e);
-      }
-    };
-
-    if (open) {
-      loadGovernorates();
-    }
-  }, [open]);
 
   // Load districts when governorate changes
   useEffect(() => {
@@ -352,9 +328,11 @@ const EditProfileDialog = ({
                 className={selectClassName}
               >
                 <option value="">Select gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
+                {genderOptions.map((option, index) => (
+                  <option key={option.code || option.id || index} value={option.code}>
+                    {option.name}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -385,14 +363,11 @@ const EditProfileDialog = ({
                 className={selectClassName}
               >
                 <option value="">Select blood type</option>
-                <option value="A+">A+</option>
-                <option value="A-">A-</option>
-                <option value="B+">B+</option>
-                <option value="B-">B-</option>
-                <option value="AB+">AB+</option>
-                <option value="AB-">AB-</option>
-                <option value="O+">O+</option>
-                <option value="O-">O-</option>
+                {bloodTypeOptions.map((type, index) => (
+                  <option key={type.code || type.id || index} value={type.code}>
+                    {type.name}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -407,8 +382,8 @@ const EditProfileDialog = ({
                 className={selectClassName}
               >
                 <option value="">Select country</option>
-                {countries.map((country) => (
-                  <option key={country.id} value={country.id.toString()}>
+                {countries.map((country, index) => (
+                  <option key={country.code || country.id || index} value={country.id?.toString()}>
                     {country.name}
                   </option>
                 ))}
@@ -426,8 +401,8 @@ const EditProfileDialog = ({
                 className={selectClassName}
               >
                 <option value="">Select governorate</option>
-                {governorates.map((gov) => (
-                  <option key={gov.id} value={gov.id.toString()}>
+                {governorates.map((gov, index) => (
+                  <option key={gov.code || gov.id || index} value={gov.id?.toString()}>
                     {gov.name}
                   </option>
                 ))}
@@ -451,8 +426,8 @@ const EditProfileDialog = ({
                       ? "Loading..."
                       : "Select district"}
                 </option>
-                {districts.map((district) => (
-                  <option key={district.id} value={district.id.toString()}>
+                {districts.map((district, index) => (
+                  <option key={district.id || index} value={district.id?.toString()}>
                     {district.name}
                   </option>
                 ))}
@@ -476,8 +451,8 @@ const EditProfileDialog = ({
                       ? "Loading..."
                       : "Select locality"}
                 </option>
-                {localities.map((locality) => (
-                  <option key={locality.id} value={locality.id.toString()}>
+                {localities.map((locality, index) => (
+                  <option key={locality.id || index} value={locality.id?.toString()}>
                     {locality.name}
                   </option>
                 ))}

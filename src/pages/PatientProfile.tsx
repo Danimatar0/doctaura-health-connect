@@ -18,7 +18,8 @@ import {
 } from "lucide-react";
 import { keycloakService } from "@/services/keycloakService";
 import { patientDataService } from "@/services/patientDataService";
-import { locationService, Country, Location } from "@/services/locationService";
+import { locationService } from "@/services/locationService";
+import { useOnboardingConfig } from "@/hooks/useOnboardingConfig";
 import { ApiError } from "@/api/mutator/customInstance";
 import { AuthUser } from "@/types/auth.types";
 import type { PatientDetailsDto } from "@/types/generated";
@@ -53,6 +54,9 @@ const PatientProfile = () => {
   const [error, setError] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
+  // Use cached onboarding config for countries and governorates
+  const { data: configData } = useOnboardingConfig();
+
   useEffect(() => {
     const fetchProfileData = async () => {
       // Check if user is authenticated
@@ -72,57 +76,6 @@ const PatientProfile = () => {
         // Fetch patient details from API
         const patientDetails = await patientDataService.getPatientProfile();
         setPatientData(patientDetails);
-
-        // Fetch location names based on IDs
-        const names: LocationNames = {
-          country: null,
-          governorate: null,
-          district: null,
-          locality: null,
-        };
-
-        // Fetch country name
-        if (patientDetails.countryId) {
-          try {
-            const countries = await locationService.getCountries();
-            const country = countries.find(c => c.id === patientDetails.countryId);
-            names.country = country?.name || null;
-          } catch (e) {
-            console.error("Failed to fetch country:", e);
-          }
-        }
-
-        // Fetch governorate name
-        if (patientDetails.governorateId) {
-          try {
-            const location = await locationService.getLocationById(patientDetails.governorateId);
-            names.governorate = location?.name || null;
-          } catch (e) {
-            console.error("Failed to fetch governorate:", e);
-          }
-        }
-
-        // Fetch district name
-        if (patientDetails.districtId) {
-          try {
-            const location = await locationService.getLocationById(patientDetails.districtId);
-            names.district = location?.name || null;
-          } catch (e) {
-            console.error("Failed to fetch district:", e);
-          }
-        }
-
-        // Fetch locality name
-        if (patientDetails.localityId) {
-          try {
-            const location = await locationService.getLocationById(patientDetails.localityId);
-            names.locality = location?.name || null;
-          } catch (e) {
-            console.error("Failed to fetch locality:", e);
-          }
-        }
-
-        setLocationNames(names);
       } catch (err) {
         console.error("Error fetching profile data:", err);
 
@@ -140,6 +93,60 @@ const PatientProfile = () => {
 
     fetchProfileData();
   }, [navigate]);
+
+  // Resolve location names from cached config and API (for districts/localities)
+  useEffect(() => {
+    const resolveLocationNames = async () => {
+      if (!patientData) return;
+
+      const names: LocationNames = {
+        country: null,
+        governorate: null,
+        district: null,
+        locality: null,
+      };
+
+      // Get country name from cached config
+      if (patientData.countryId && configData?.reference?.countries) {
+        const country = configData.reference.countries.find(
+          c => c.id === patientData.countryId
+        );
+        names.country = country?.name || null;
+      }
+
+      // Get governorate name from cached config
+      if (patientData.governorateId && configData?.reference?.governorates) {
+        const governorate = configData.reference.governorates.find(
+          g => g.id === patientData.governorateId
+        );
+        names.governorate = governorate?.name || null;
+      }
+
+      // Fetch district name from API (dynamic, depends on governorate)
+      if (patientData.districtId) {
+        try {
+          const location = await locationService.getLocationById(patientData.districtId);
+          names.district = location?.name || null;
+        } catch (e) {
+          console.error("Failed to fetch district:", e);
+        }
+      }
+
+      // Fetch locality name from API (dynamic, depends on district)
+      if (patientData.localityId) {
+        try {
+          const location = await locationService.getLocationById(patientData.localityId);
+          names.locality = location?.name || null;
+        } catch (e) {
+          console.error("Failed to fetch locality:", e);
+        }
+      }
+
+      setLocationNames(names);
+    };
+
+    resolveLocationNames();
+  }, [patientData, configData]);
 
   const handleProfileUpdated = (updatedUser: AuthUser) => {
     setUser(updatedUser);

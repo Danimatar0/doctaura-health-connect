@@ -8,6 +8,7 @@ import { EncryptionProvider } from "@/contexts/EncryptionContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import PublicRoute from "@/components/PublicRoute";
 import FeatureRoute from "@/components/FeatureRoute";
+import ScrollToTop from "@/components/ScrollToTop";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -43,9 +44,17 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+          <ScrollToTop />
           <Routes>
-          {/* Public Landing Page */}
-          <Route path="/" element={<Index />} />
+          {/* Public Landing Page - Redirects to dashboard if authenticated */}
+          <Route
+            path="/"
+            element={
+              <PublicRoute>
+                <Index />
+              </PublicRoute>
+            }
+          />
 
           {/* Authentication Routes - Redirect if already authenticated */}
           <Route

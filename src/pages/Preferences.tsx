@@ -254,14 +254,14 @@ const Preferences = () => {
                       <button
                         key={lang.code}
                         onClick={() => updatePreference("language", lang.code)}
-                        className={`relative flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+                        className={`relative flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all min-h-[80px] overflow-hidden ${
                           preferences.language === lang.code
                             ? "border-primary bg-primary/5"
                             : "border-border hover:border-primary/50 hover:bg-muted/50"
                         }`}
                       >
                         <span className="text-2xl">{lang.flag}</span>
-                        <span className="font-medium">{lang.name}</span>
+                        <span className="font-medium text-sm truncate max-w-full">{lang.name}</span>
                         {preferences.language === lang.code && (
                           <Check className="absolute top-2 right-2 h-4 w-4 text-primary" />
                         )}

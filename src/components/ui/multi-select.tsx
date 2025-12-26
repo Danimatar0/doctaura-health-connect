@@ -154,13 +154,19 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
               className="px-1.5 py-0 text-xs font-normal"
             >
               {opt.label}
-              <button
-                type="button"
-                className="ml-1 hover:text-destructive"
+              <span
+                role="button"
+                tabIndex={0}
+                className="ml-1 hover:text-destructive cursor-pointer"
                 onClick={(e) => handleRemove(opt.value, e)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    handleRemove(opt.value, e as unknown as React.MouseEvent);
+                  }
+                }}
               >
                 <X className="h-3 w-3" />
-              </button>
+              </span>
             </Badge>
           ))}
           {remainingCount > 0 && (
@@ -197,13 +203,19 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
               <div className="flex-1 text-left">{displayValue()}</div>
               <div className="flex items-center gap-1 ml-2">
                 {selectedOptions.length > 0 && (
-                  <button
-                    type="button"
-                    className="p-0.5 hover:bg-muted rounded"
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    className="p-0.5 hover:bg-muted rounded cursor-pointer"
                     onClick={handleClearAll}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        handleClearAll(e as unknown as React.MouseEvent);
+                      }
+                    }}
                   >
                     <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                  </button>
+                  </span>
                 )}
                 <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
               </div>

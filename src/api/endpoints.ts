@@ -116,6 +116,14 @@ export const API = {
     /** Get localities by district */
     Localities: (districtId: number) => `${BASE_URL}/locations/districts/${districtId}/localities`,
   },
+
+  /**
+   * Configuration endpoints (versioned, cacheable)
+   */
+  Config: {
+    /** Onboarding configuration (countries, genders, specialties, rules, etc.) */
+    Onboarding: `${BASE_URL}/config/onboarding`,
+  },
 } as const;
 
 /**

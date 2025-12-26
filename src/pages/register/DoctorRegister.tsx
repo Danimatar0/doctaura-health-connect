@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -46,10 +46,11 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { VALIDATION_PATTERNS } from "@/lib/validators";
 import { getAuthErrorMessage } from "@/types/auth.types";
 import { doctorRegistrationService } from "@/services/doctorRegistrationService";
 import { locationService } from "@/services/locationService";
-import type { Country, Location } from "@/services/locationService";
+import type { Location } from "@/services/locationService";
 import {
   DoctorFormData,
   Specialty,
@@ -60,6 +61,14 @@ import {
   DEFAULT_SPECIALTIES,
   DEFAULT_LANGUAGES,
 } from "@/types/registration.types";
+import { useOnboardingConfig } from "@/hooks/useOnboardingConfig";
+
+// Default fallback for genders (used when config is loading)
+const DEFAULT_GENDER_OPTIONS = [
+  { id: 0, code: "male", name: "Male" },
+  { id: 1, code: "female", name: "Female" },
+  { id: 2, code: "other", name: "Other" },
+] as const;
 
 // ============================================================================
 // Form Validation Schemas
@@ -70,12 +79,12 @@ const step1Schema = z.object({
     .string()
     .min(2, "First name must be at least 2 characters")
     .max(50, "First name cannot exceed 50 characters")
-    .regex(/^[a-zA-Z\s]+$/, "First name can only contain letters"),
+    .regex(VALIDATION_PATTERNS.lettersOnly, "First name can only contain letters"),
   lastName: z
     .string()
     .min(2, "Last name must be at least 2 characters")
     .max(50, "Last name cannot exceed 50 characters")
-    .regex(/^[a-zA-Z\s]+$/, "Last name can only contain letters"),
+    .regex(VALIDATION_PATTERNS.lettersOnly, "Last name can only contain letters"),
   email: z.string().min(1, "Email is required").email("Please enter a valid email"),
   password: z
     .string()
@@ -111,7 +120,8 @@ const step3Schema = z.object({
   medicalLicenseNumber: z
     .string()
     .min(5, "License number must be at least 5 characters")
-    .max(50, "License number cannot exceed 50 characters"),
+    .max(50, "License number cannot exceed 50 characters")
+    .regex(VALIDATION_PATTERNS.alphanumeric, "License number can only contain letters and numbers"),
   yearsOfExperience: z
     .number()
     .min(0, "Years of experience cannot be negative")
@@ -170,19 +180,34 @@ const DoctorRegister = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Reference data
-  const [specialties, setSpecialties] = useState<Specialty[]>(DEFAULT_SPECIALTIES);
-  const [languages, setLanguages] = useState<Language[]>(DEFAULT_LANGUAGES);
-  const [countries, setCountries] = useState<Country[]>([]);
-  const [governorates, setGovernorates] = useState<Location[]>([]);
+  // Onboarding config (countries, genders from cached config)
+  const { data: onboardingConfig, loading: configLoading } = useOnboardingConfig();
+
+  // Derived config values with fallbacks
+  const countries = useMemo(
+    () => onboardingConfig?.reference.countries ?? [],
+    [onboardingConfig]
+  );
+  const genderOptions = useMemo(
+    () => onboardingConfig?.reference.gender ?? DEFAULT_GENDER_OPTIONS,
+    [onboardingConfig]
+  );
+  const specialties = useMemo(
+    () => onboardingConfig?.reference.specialties ?? DEFAULT_SPECIALTIES,
+    [onboardingConfig]
+  );
+  const languages = useMemo(
+    () => onboardingConfig?.reference.supportedLanguages ?? DEFAULT_LANGUAGES,
+    [onboardingConfig]
+  );
+  const governorates = useMemo(
+    () => onboardingConfig?.reference.governorates ?? [],
+    [onboardingConfig]
+  );
+
+  // Districts and localities still loaded dynamically based on selection
   const [districts, setDistricts] = useState<Location[]>([]);
   const [localities, setLocalities] = useState<Location[]>([]);
-
-  // Loading states
-  const [loadingSpecialties, setLoadingSpecialties] = useState(true);
-  const [loadingLanguages, setLoadingLanguages] = useState(true);
-  const [loadingCountries, setLoadingCountries] = useState(true);
-  const [loadingGovernorates, setLoadingGovernorates] = useState(false);
 
   // File upload
   const [certificationFile, setCertificationFile] = useState<File | null>(null);
@@ -249,30 +274,8 @@ const DoctorRegister = () => {
 
   const passwordStrength = getPasswordStrength();
 
-  // Load reference data
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [specialtiesData, languagesData, countriesData, governoratesData] = await Promise.all([
-          doctorRegistrationService.getSpecialties(),
-          doctorRegistrationService.getLanguages(),
-          locationService.getCountries(),
-          locationService.getGovernorates(),
-        ]);
-        setSpecialties(specialtiesData);
-        setLanguages(languagesData);
-        setCountries(countriesData);
-        setGovernorates(governoratesData);
-      } catch (err) {
-        console.error("Failed to load reference data:", err);
-      } finally {
-        setLoadingSpecialties(false);
-        setLoadingLanguages(false);
-        setLoadingCountries(false);
-      }
-    };
-    loadData();
-  }, []);
+  // All reference data (countries, genders, specialties, languages, governorates)
+  // comes from cached onboardingConfig - no additional API calls needed
 
   // Step validation
   const validateCurrentStep = async (): Promise<boolean> => {
@@ -305,10 +308,17 @@ const DoctorRegister = () => {
   };
 
   const handleNext = async () => {
+    setError(null);
     const isValid = await validateCurrentStep();
+
+    // Debug: log validation result and current errors
+    console.log("Validation result:", isValid);
+    console.log("Form errors after validation:", control._formState.errors);
+
     if (isValid && currentStep < STEPS.length) {
       setCurrentStep(currentStep + 1);
-      setError(null);
+    } else if (!isValid) {
+      setError("Please fill in all required fields before continuing.");
     }
   };
 
@@ -399,7 +409,7 @@ const DoctorRegister = () => {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="firstName">First Name</Label>
+          <Label htmlFor="firstName">First Name <span className="text-destructive">*</span></Label>
           <div className="relative">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -414,7 +424,7 @@ const DoctorRegister = () => {
           )}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="lastName">Last Name</Label>
+          <Label htmlFor="lastName">Last Name <span className="text-destructive">*</span></Label>
           <div className="relative">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -431,7 +441,7 @@ const DoctorRegister = () => {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="email">Email Address</Label>
+        <Label htmlFor="email">Email Address <span className="text-destructive">*</span></Label>
         <div className="relative">
           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -448,7 +458,7 @@ const DoctorRegister = () => {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">Password <span className="text-destructive">*</span></Label>
         <div className="relative">
           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -492,7 +502,7 @@ const DoctorRegister = () => {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="confirmPassword">Confirm Password</Label>
+        <Label htmlFor="confirmPassword">Confirm Password <span className="text-destructive">*</span></Label>
         <div className="relative">
           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -521,7 +531,7 @@ const DoctorRegister = () => {
   const renderStep2 = () => (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="phone">Phone Number</Label>
+        <Label htmlFor="phone">Phone Number <span className="text-destructive">*</span></Label>
         <div className="relative">
           <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -538,22 +548,27 @@ const DoctorRegister = () => {
       </div>
 
       <div className="space-y-2">
-        <Label>Gender</Label>
+        <Label>Gender <span className="text-destructive">*</span></Label>
         <Controller
           name="gender"
           control={control}
           render={({ field }) => (
             <Select
-              value={field.value?.toString()}
+              value={field.value !== undefined ? field.value.toString() : ""}
               onValueChange={(val) => field.onChange(parseInt(val))}
             >
               <SelectTrigger className={errors.gender ? "border-destructive" : ""}>
                 <SelectValue placeholder="Select gender" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="0">Male</SelectItem>
-                <SelectItem value="1">Female</SelectItem>
-                <SelectItem value="2">Other</SelectItem>
+                {genderOptions.map((option, index) => {
+                  const id = option.id ?? index;
+                  return (
+                    <SelectItem key={option.code ?? id} value={id.toString()}>
+                      {option.name}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           )}
@@ -564,7 +579,7 @@ const DoctorRegister = () => {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="dateOfBirth">Date of Birth</Label>
+        <Label htmlFor="dateOfBirth">Date of Birth <span className="text-destructive">*</span></Label>
         <div className="relative">
           <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -585,25 +600,28 @@ const DoctorRegister = () => {
   const renderStep3 = () => (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label>Specialty</Label>
+        <Label>Specialty <span className="text-destructive">*</span></Label>
         <Controller
           name="specialtyId"
           control={control}
           render={({ field }) => (
             <Select
-              value={field.value?.toString()}
+              value={field.value !== undefined ? field.value.toString() : ""}
               onValueChange={(val) => field.onChange(parseInt(val))}
-              disabled={loadingSpecialties}
+              disabled={configLoading && specialties.length === 0}
             >
               <SelectTrigger className={errors.specialtyId ? "border-destructive" : ""}>
-                <SelectValue placeholder={loadingSpecialties ? "Loading..." : "Select your specialty"} />
+                <SelectValue placeholder={configLoading && specialties.length === 0 ? "Loading..." : "Select your specialty"} />
               </SelectTrigger>
               <SelectContent>
-                {specialties.map((specialty) => (
-                  <SelectItem key={specialty.id} value={specialty.id.toString()}>
-                    {specialty.name}
-                  </SelectItem>
-                ))}
+                {specialties.map((specialty, index) => {
+                  const id = specialty.id ?? index + 1;
+                  return (
+                    <SelectItem key={id} value={id.toString()}>
+                      {specialty.name}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           )}
@@ -615,7 +633,7 @@ const DoctorRegister = () => {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="medicalLicenseNumber">Medical License Number</Label>
+          <Label htmlFor="medicalLicenseNumber">Medical License Number <span className="text-destructive">*</span></Label>
           <div className="relative">
             <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -631,7 +649,7 @@ const DoctorRegister = () => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="yearsOfExperience">Years of Experience</Label>
+          <Label htmlFor="yearsOfExperience">Years of Experience <span className="text-destructive">*</span></Label>
           <Input
             id="yearsOfExperience"
             type="number"
@@ -658,20 +676,20 @@ const DoctorRegister = () => {
       </div>
 
       <div className="space-y-2">
-        <Label>Languages Spoken</Label>
+        <Label>Languages Spoken <span className="text-destructive">*</span></Label>
         <Controller
           name="languageIds"
           control={control}
           render={({ field }) => (
             <MultiSelect
-              options={languages.map((lang) => ({
-                value: lang.id,
+              options={languages.map((lang, index) => ({
+                value: lang.id ?? index + 1, // Fallback to index+1 if id is undefined
                 label: lang.name,
               }))}
               value={field.value}
               onChange={field.onChange}
               placeholder="Select languages you speak"
-              isLoading={loadingLanguages}
+              isLoading={configLoading && languages.length === 0}
               error={errors.languageIds?.message}
             />
           )}
@@ -679,7 +697,7 @@ const DoctorRegister = () => {
       </div>
 
       <div className="space-y-2">
-        <Label>Consultation Type</Label>
+        <Label>Consultation Type <span className="text-destructive">*</span></Label>
         <Controller
           name="consultationType"
           control={control}
@@ -746,7 +764,7 @@ const DoctorRegister = () => {
   const renderStep4 = () => (
     <div className="space-y-6">
       <div className="space-y-2">
-        <Label>Practice Type</Label>
+        <Label>Practice Type <span className="text-destructive">*</span></Label>
         <Controller
           name="practiceType"
           control={control}
@@ -860,20 +878,20 @@ const DoctorRegister = () => {
   const renderStep5 = () => (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label>Countries</Label>
+        <Label>Countries <span className="text-destructive">*</span></Label>
         <Controller
           name="serviceAreaCountryIds"
           control={control}
           render={({ field }) => (
             <MultiSelect
-              options={countries.map((country) => ({
-                value: country.id,
+              options={countries.map((country, index) => ({
+                value: country.id ?? index + 1,
                 label: country.name,
               }))}
               value={field.value}
               onChange={field.onChange}
               placeholder="Select countries where you practice"
-              isLoading={loadingCountries}
+              isLoading={configLoading && countries.length === 0}
               error={errors.serviceAreaCountryIds?.message}
             />
           )}
@@ -887,14 +905,14 @@ const DoctorRegister = () => {
           control={control}
           render={({ field }) => (
             <MultiSelect
-              options={governorates.map((gov) => ({
-                value: gov.id,
+              options={governorates.map((gov, index) => ({
+                value: gov.id ?? index + 1,
                 label: gov.name,
               }))}
               value={field.value || []}
               onChange={field.onChange}
               placeholder="Select governorates"
-              isLoading={loadingGovernorates}
+              isLoading={configLoading && governorates.length === 0}
               helperText="Narrow down your service area by selecting specific governorates"
             />
           )}
